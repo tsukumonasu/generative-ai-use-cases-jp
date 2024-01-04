@@ -28,6 +28,7 @@ export class Api extends Construct {
   readonly modelIds: string[];
   readonly imageGenerationModelIds: string[];
   readonly endpointNames: string[];
+  readonly authorizer: CognitoUserPoolsAuthorizer;
 
   constructor(scope: Construct, id: string, props: BackendApiProps) {
     super(scope, id);
@@ -396,5 +397,6 @@ export class Api extends Construct {
     this.modelIds = modelIds;
     this.imageGenerationModelIds = imageGenerationModelIds;
     this.endpointNames = endpointNames;
+    this.authorizer = authorizer;
   }
 }

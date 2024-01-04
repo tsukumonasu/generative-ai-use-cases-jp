@@ -8,6 +8,7 @@ type Props = BaseProps & {
   outlined?: boolean;
   onClick: () => void;
   children: React.ReactNode;
+  type?: 'button' | 'submit' | 'reset';
 };
 
 const Button: React.FC<Props> = (props) => {
@@ -22,7 +23,9 @@ const Button: React.FC<Props> = (props) => {
         props.disabled || props.loading ? 'opacity-30' : 'hover:brightness-75'
       }`}
       onClick={props.onClick}
-      disabled={props.disabled || props.loading}>
+      disabled={props.disabled || props.loading}
+      type={props.type}
+      >
       {props.loading && <PiSpinnerGap className="mr-2 animate-spin" />}
       {props.children}
     </button>

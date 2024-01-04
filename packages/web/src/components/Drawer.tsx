@@ -20,7 +20,7 @@ export type ItemProps = BaseProps & {
   label: string;
   to: string;
   icon: JSX.Element;
-  display: 'usecase' | 'tool' | 'none';
+  display: 'usecase' | 'tool' | 'template' | 'none';
 };
 
 const Item: React.FC<ItemProps> = (props) => {
@@ -112,6 +112,10 @@ const Drawer: React.FC<Props> = (props) => {
     return props.items.filter((i) => i.display === 'tool');
   }, [props.items]);
 
+  const templates = useMemo(() => {
+    return props.items.filter((i) => i.display === 'template');
+  }, [props.items]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const searchWords = useMemo(() => {
     return searchQuery
@@ -139,11 +143,33 @@ const Drawer: React.FC<Props> = (props) => {
           ))}
         </div>
         <div className="border-b" />
+        {templates.length > 0 && (
+          <>
+            <ExpandableMenu
+              title="テンプレート共有"
+              defaultOpened={true}
+              className="mx-3 my-2 text-xs">
+              <div className="mb-2 ml-2 mr-1">
+                {templates.map((item, idx) => (
+                  <Item
+                    key={idx}
+                    label={item.label}
+                    icon={item.icon}
+                    to={item.to}
+                    display={item.display}
+                  />
+                ))}
+              </div>
+            </ExpandableMenu>
+          </>
+        )}
+        <div className="border-b" />
         {tools.length > 0 && (
           <>
             <ExpandableMenu
               title="ツール"
               subTitle="(AIサービス)"
+              defaultOpened={false}
               className="mx-3 my-2 text-xs">
               <div className="mb-2 ml-2 mr-1">
                 {tools.map((item, idx) => (
@@ -173,7 +199,7 @@ const Drawer: React.FC<Props> = (props) => {
             />
             <PiMagnifyingGlass className="bg-aws-squid-ink absolute left-1.5 top-1 h-7 w-7 rounded-l-full border border-white p-1.5" />
           </div>
-          <div className="scrollbar-thin scrollbar-thumb-white ml-2 mr-1 h-full overflow-y-auto">
+          <div className="scrollbar-thin scrollbar-thumb-white ml-2 mr-1 h-1/3 overflow-y-auto">
             <ChatList className="mr-1" searchWords={searchWords} />
           </div>
         </ExpandableMenu>

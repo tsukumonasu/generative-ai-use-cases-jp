@@ -1,6 +1,7 @@
 import { Stack, StackProps, CfnOutput } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Auth, Api, Web, Database, Rag, Transcribe } from './construct';
+import { Template } from './construct/template';
 
 const errorMessageForBooleanContext = (key: string) => {
   return `${key} の設定でエラーになりました。原因として考えられるものは以下です。
@@ -41,7 +42,9 @@ export class GenerativeAiUseCasesStack extends Stack {
       selfSignUpEnabled,
       allowedSignUpEmailDomains,
     });
+
     const database = new Database(this, 'Database');
+
     const api = new Api(this, 'API', {
       userPool: auth.userPool,
       idPool: auth.idPool,
@@ -69,6 +72,13 @@ export class GenerativeAiUseCasesStack extends Stack {
         api: api.api,
       });
     }
+
+    // Prompt を管理するテンプレート機能
+    const template = new Template(this, 'Template', {
+      userPool: auth.userPool,
+      api: api.api,
+      authorizer: api.authorizer,
+    });
 
     new Transcribe(this, 'Transcribe', {
       userPool: auth.userPool,
@@ -122,6 +132,10 @@ export class GenerativeAiUseCasesStack extends Stack {
 
     new CfnOutput(this, 'EndpointNames', {
       value: JSON.stringify(api.endpointNames),
+    });
+
+    new CfnOutput(this, 'RequireInitDataCommand', {
+      value: "aws lambda invoke --function-name " + template.initDataFunctionName + " --payload '{}' output.json",
     });
   }
 }

@@ -45,6 +45,27 @@ const useHttp = () => {
       return useSWR<Data, Error>(url, fetcher, config);
     },
 
+    // React Hook を利用して任意のタイミングで GET API を実行するための関数。「get」関数は、自動更新されてしまう。また、「get」関数で Hook させようと思うと、エラーになったので、これを用意。
+    getWithPromise: <RES = any, DATA = any>(
+      url: string,
+      reqConfig?: AxiosRequestConfig,
+      errorProcess?: (err: any) => void
+    ) => {
+      return new Promise<AxiosResponse<RES>>((resolve, reject) => {
+        api
+          .get<RES, AxiosResponse<RES>, DATA>(url, reqConfig)
+          .then((data) => {
+            resolve(data);
+          })
+          .catch((err) => {
+            if (errorProcess) {
+              errorProcess(err);
+            }
+            reject(err);
+          });
+      });
+    },
+
     /**
      * POST Request
      * @param url

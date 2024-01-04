@@ -20,6 +20,7 @@ import RagPage from './pages/RagPage';
 import WebContent from './pages/WebContent';
 import GenerateImagePage from './pages/GenerateImagePage';
 import TranscribePage from './pages/TranscribePage';
+import TemplatesMy from './pages/TemplatesMy.tsx';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
 
@@ -80,6 +81,10 @@ const routes: RouteObject[] = [
         element: <KendraSearchPage />,
       }
     : null,
+  {
+    path: '/templates/mytemplate',
+    element: <TemplatesMy />,
+  },
   {
     path: '*',
     element: <NotFound />,

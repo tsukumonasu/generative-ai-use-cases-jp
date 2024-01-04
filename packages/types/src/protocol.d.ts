@@ -115,3 +115,59 @@ export type WebTextRequest = {
 export type WebTextResponse = {
   text: string;
 };
+
+export type GetTemplatesByUserRequest = {
+};
+
+export type Template = {
+  id: string;
+  templateid: string;
+  title: string;
+  prompt: string;
+  public: boolean;
+  usermailaddress: string;
+  tags: Record<string, string>;
+  createdDate: string;
+  copycount: string;
+  gsi_pk: string;
+  gsi_sk: string;
+};
+
+export type GetTemplatesByUserResponse = {
+  items: Template[],
+  LastEvaluatedKey: {
+    [key: string]: string;
+  };
+}
+
+export type CreateTemplateRequest = {
+  title: string;
+  prompt: string;
+  public: boolean;
+  tags: string[];
+}
+
+export type CreateTemplateResponse = {
+  recordedTemplate: Template;
+}
+
+export type UpdateTemplateRequest = {
+  id: string;
+  templateid: string;
+  title: string;
+  prompt: string;
+  public: boolean;
+  tags: string[];
+}
+
+export type UpdateTemplateResponse = {
+  response: string;
+}
+
+export type DeleteTemplateRequest = {
+  id: string;
+}
+
+export type DeleteTemplateResponse = {
+  response: string;
+}

@@ -15,6 +15,8 @@ import {
   PiGear,
   PiGlobe,
   PiX,
+  PiBookOpen,
+  PiChatCenteredTextThin,
 } from 'react-icons/pi';
 import { Outlet } from 'react-router-dom';
 import Drawer, { ItemProps } from './components/Drawer';
@@ -108,6 +110,36 @@ const items: ItemProps[] = [
         display: 'tool' as const,
       }
     : null,
+  {
+    label: 'マイテンプレート',
+    to: '/templates/mytemplate',
+    icon: <PiBookOpen className="text-base" />,
+    display: 'template' as const,
+  },
+  {
+    label: 'デザイナー向け',
+    to: '/templates/tags/00000000-0000-0000-0000-000000000001',
+    icon: <PiChatCenteredTextThin className="w-4 fill-white" />,
+    display: 'template' as const,
+  },
+  {
+    label: '営業向け',
+    to: '/templates/tags/00000000-0000-0000-0000-000000000002',
+    icon: <PiChatCenteredTextThin className="w-4 fill-white" />,
+    display: 'template' as const,
+  },
+  {
+    label: 'マーチャンタイザー向け',
+    to: '/templates/tags/00000000-0000-0000-0000-000000000003',
+    icon: <PiChatCenteredTextThin className="w-4 fill-white" />,
+    display: 'template' as const,
+  },
+  {
+    label: 'タグから探す',
+    to: '/templates/tags',
+    icon: <PiMagnifyingGlass className="w-4 fill-white" />,
+    display: 'template' as const,
+  },
 ].flatMap((i) => (i !== null ? [i] : []));
 
 // /chat/:chatId の形式から :chatId を返す
