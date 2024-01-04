@@ -11,8 +11,8 @@ import {
   PiPlusCircleBold,
   PiNotePencil,
 } from 'react-icons/pi';
-import ModalWindowsForCreateTemplate, { CreateModalWindowHandle } from './TemplatesCreateModalWindows';
-import ModalWindowsForUpdateTemplate, { UpdateModalWindowHandle } from './TemplatesUpdateModalWindows';
+import ModalWindowsForCreateTemplate, { CreateModalWindowHandle } from './TemplatesCreateModalWindow';
+import ModalWindowsForUpdateTemplate, { UpdateModalWindowHandle } from './TemplatesUpdateModalWindow';
 import { Template as TemplateType } from 'generative-ai-use-cases-jp';
 
 const TemplatesMy: React.FC = () => {
