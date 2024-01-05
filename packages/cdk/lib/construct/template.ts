@@ -142,6 +142,20 @@ export class Template extends Construct {
         templateTable.grantReadWriteData(updateTemplateFunction);
         tagTable.grantReadWriteData(updateTemplateFunction);
 
+        // テンプレートの削除関数
+        const deleteTemplateFunction = new NodejsFunction(this, 'deleteTemplate', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/deleteTemplate.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TEMPLATE_TABLE_GSI_INDEX_NAME: gsiIndexName,
+            },
+        });
+        templateTable.grantReadWriteData(deleteTemplateFunction);
+        tagTable.grantReadWriteData(deleteTemplateFunction);
+
 
         // TODO : CDK でカスタムリソースを定義して実行すると、想定通りに Lambda 関数が実行されるが、CloudFormation の Stack Status が CREATE_IN_PROGRESS のまま動かない。一旦、カスタムリソースは止めておく。
         // const customResourceResult = new CustomResource(
@@ -197,6 +211,12 @@ export class Template extends Construct {
         templateResource.addMethod(
             'PUT',
             new LambdaIntegration(updateTemplateFunction), 
+            commonAuthorizerProps
+        )
+
+        templateResource.addMethod(
+            'DELETE',
+            new LambdaIntegration(deleteTemplateFunction),
             commonAuthorizerProps
         )
     }

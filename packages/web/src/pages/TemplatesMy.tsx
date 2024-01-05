@@ -10,9 +10,11 @@ import {
 import {
   PiPlusCircleBold,
   PiNotePencil,
+  PiTrash,
 } from 'react-icons/pi';
 import ModalWindowsForCreateTemplate, { CreateModalWindowHandle } from './TemplatesCreateModalWindow';
 import ModalWindowsForUpdateTemplate, { UpdateModalWindowHandle } from './TemplatesUpdateModalWindow';
+import ModalWindowsForDeleteTemplate, { DeleteModalWindowHandle } from './TemplatesDeleteModalWindow';
 import { Template as TemplateType } from 'generative-ai-use-cases-jp';
 
 const TemplatesMy: React.FC = () => {
@@ -26,6 +28,7 @@ const TemplatesMy: React.FC = () => {
     setLoading,
     createTemplateAndReload,
     updateTemplateAndReload: updateTemplateAndReload,
+    deleteTemplateAndReload,
   } = useTemplateMy();
 
   // 画面表示時に、自分が作成したテンプレートリストを取得して、State に格納する
@@ -61,6 +64,7 @@ const TemplatesMy: React.FC = () => {
   // モーダルウィンドウを開く関数を呼び出すために、呼び出し先の子供の関数を受け取る宣言
   const createModalWindow = useRef<CreateModalWindowHandle>(null);
   const updateModalWindow = useRef<UpdateModalWindowHandle>(null);
+  const deleteModalWindow = useRef<DeleteModalWindowHandle>(null);
 
   // 子供の関数を呼び出す。モーダルウィンドウを開く。
   const callOpenModalWindow = () => {
@@ -68,6 +72,9 @@ const TemplatesMy: React.FC = () => {
   };
   const callUpdateModalWindow = (template: TemplateType) => {
     updateModalWindow.current?.openModalWindow(template);
+  };
+  const callDeleteModalWindow = (template: TemplateType) => {
+    deleteModalWindow.current?.openModalWindow(template);
   };
 
   return (
@@ -94,6 +101,10 @@ const TemplatesMy: React.FC = () => {
                   <PiNotePencil className="h-6 w-6 ml-6" />
                 </div>
                 <span className="text-sm font-medium ml-1">編集</span>
+                <div onClick={() => callDeleteModalWindow(template)} style={{ cursor: 'pointer' }}>
+                  <PiTrash className="h-6 w-6 ml-6" />
+                </div>
+                <span className="text-sm font-medium ml-1">削除</span>
               </div>
               <div className="grid grid-cols-5 gap-2">
                 <div className="col-start-1 col-end-6 p-1">
@@ -146,6 +157,10 @@ const TemplatesMy: React.FC = () => {
       <ModalWindowsForUpdateTemplate // テンプレート編集用のモーダルウィンドウ
         ref={updateModalWindow} // モーダルウィンドウ側 (子) の関数を、TemplatesMy (親) 側で呼び出すための参照設定
         updateTemplateAndReload={updateTemplateAndReload} // TemplatesMy (親) 側で持っている関数を、モーダルウィンドウ側 (子) に渡す設定
+      />
+      <ModalWindowsForDeleteTemplate // テンプレート編集用のモーダルウィンドウ
+        ref={deleteModalWindow} // モーダルウィンドウ側 (子) の関数を、TemplatesMy (親) 側で呼び出すための参照設定
+        deleteTemplateAndReload={deleteTemplateAndReload} // TemplatesMy (親) 側で持っている関数を、モーダルウィンドウ側 (子) に渡す設定
       />
     </div>
   );
