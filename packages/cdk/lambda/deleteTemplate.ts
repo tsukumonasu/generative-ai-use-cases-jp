@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 
 const client = new DynamoDBClient();
@@ -65,10 +65,6 @@ async function deleteTemplate(templateid: string): Promise<boolean> {
     // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
     // 営業, デザイナー, マーチャンタイザー は除外
     for (const [tagId, tagName] of Object.entries(deletedTags)) {
-        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
-            continue;
-        }
-
         // ここで DynamoDB に対してクエリーを実行します。
         const queryCommand = new QueryCommand({
             TableName: templateTableName,
@@ -79,6 +75,24 @@ async function deleteTemplate(templateid: string): Promise<boolean> {
         });
 
         const queryResult = await dynamoDb.send(queryCommand);
+
+        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
+            continue;
+        }
+
         if (queryResult.Items && queryResult.Items.length === 0) {
             console.log(`Deleting tagId: ${tagId}, tagName: ${tagName}`);
 
@@ -90,6 +104,20 @@ async function deleteTemplate(templateid: string): Promise<boolean> {
                 }
             });
             await dynamoDb.send(deleteCommand);
+        } else if (queryResult.Items && queryResult.Items.length > 0) {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
         }
     }
 

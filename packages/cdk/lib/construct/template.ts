@@ -87,6 +87,19 @@ export class Template extends Construct {
             }
         });
 
+        const tagTableGsiIndexName = 'GSIIndex'
+        tagTable.addGlobalSecondaryIndex({
+            indexName: tagTableGsiIndexName,
+            partitionKey: {
+                name: 'gsi_pk',
+                type: ddb.AttributeType.STRING,
+            },
+            sortKey: {
+                name: 'gsi_sk',
+                type: ddb.AttributeType.NUMBER,
+            }
+        });
+
         // Tag を管理するテーブルに、初期データを作成するための Lambda 関数の作成 (タキヒヨー様向けなので、一般向けには利用しなくても良い)
         const initDataFunction = new NodejsFunction(this, 'InitDataLambda', {
             runtime: Runtime.NODEJS_18_X,
@@ -156,6 +169,20 @@ export class Template extends Construct {
         templateTable.grantReadWriteData(deleteTemplateFunction);
         tagTable.grantReadWriteData(deleteTemplateFunction);
 
+        // タグの取得関数
+        const getTagFunction = new NodejsFunction(this, 'getTamplateTags', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/getTamplateTags.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TAG_TABLE_GSI_INDEX_NAME: tagTableGsiIndexName,
+            },
+        });
+        templateTable.grantReadWriteData(getTagFunction);
+        tagTable.grantReadWriteData(getTagFunction);
+
 
         // TODO : CDK でカスタムリソースを定義して実行すると、想定通りに Lambda 関数が実行されるが、CloudFormation の Stack Status が CREATE_IN_PROGRESS のまま動かない。一旦、カスタムリソースは止めておく。
         // const customResourceResult = new CustomResource(
@@ -219,5 +246,18 @@ export class Template extends Construct {
             new LambdaIntegration(deleteTemplateFunction),
             commonAuthorizerProps
         )
+
+        // タグ取得
+        const tagsResource = templatesResource.addResource('tags');
+        tagsResource.addMethod(
+            'GET',
+            new LambdaIntegration(getTagFunction),
+            {
+                ...commonAuthorizerProps,
+                requestParameters: {
+                    'method.request.querystring.lastEvaluatedKey': false
+                }
+            }
+        );
     }
 }

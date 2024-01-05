@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient();
 const dynamoDb = DynamoDBDocumentClient.from(client);
@@ -22,7 +22,7 @@ interface Request {
 
 // 入力された Tag に対して、処理を行う。
 // 新規 Tag の場合は uuid を新たに発行する。既存の Tag の場合は、既存の id を取得する。
-async function processTags(tags: string[]): Promise<Record<string, string>> {
+async function getAndGenerateTagIds(tags: string[]): Promise<Record<string, string>> {
     const tagTableName = process.env.TAG_TABLE_NAME;
 
     const tagsRecord: Record<string, string> = {};
@@ -42,6 +42,20 @@ async function processTags(tags: string[]): Promise<Record<string, string>> {
         if (queryResult.Items && queryResult.Items.length > 0) {
             // 既存のタグが見つかった場合、そのtagidを使用
             tagId = queryResult.Items[0].tagid;
+
+            // templateCount を増やす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tag,
+                },
+                UpdateExpression: 'SET gsi_sk = gsi_sk + :inc',
+                ExpressionAttributeValues: {
+                    ':inc': 1
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
         } else {
             // 新しいタグを作成
             tagId = uuidv4();
@@ -49,7 +63,9 @@ async function processTags(tags: string[]): Promise<Record<string, string>> {
                 TableName: tagTableName,
                 Item: {
                     tagname: tag,
-                    tagid: tagId
+                    tagid: tagId,
+                    gsi_pk: "templateCount",
+                    gsi_sk: 1,
                 }
             });
             await dynamoDb.send(putCommand);
@@ -127,7 +143,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         // 公開設定を「公開」に指定したときに、入力された Tag の id を取得する。新規 Tag の場合は uuid を新たに発行する。既存の Tag の場合は、既存の id を取得する。
         if (body.public) {
-            tags = await processTags(tags);
+            tags = await getAndGenerateTagIds(tags);
         } else {
             tags = [];
         }

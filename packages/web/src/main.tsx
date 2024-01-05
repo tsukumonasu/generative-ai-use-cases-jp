@@ -21,6 +21,7 @@ import WebContent from './pages/WebContent';
 import GenerateImagePage from './pages/GenerateImagePage';
 import TranscribePage from './pages/TranscribePage';
 import TemplatesMy from './pages/TemplatesMy.tsx';
+import TemplatesTagSelect from './pages/TemplatesTagSelect.tsx';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
 
@@ -84,6 +85,10 @@ const routes: RouteObject[] = [
   {
     path: '/templates/mytemplate',
     element: <TemplatesMy />,
+  },
+  {
+    path: '/templates/tags',
+    element: <TemplatesTagSelect />,
   },
   {
     path: '*',

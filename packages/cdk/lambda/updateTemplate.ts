@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 
 const client = new DynamoDBClient();
@@ -43,6 +43,20 @@ async function getAndGenerateTagIds(tags: string[]): Promise<Record<string, stri
         if (queryResult.Items && queryResult.Items.length > 0) {
             // 既存のタグが見つかった場合、そのtagidを使用
             tagId = queryResult.Items[0].tagid;
+
+            // templateCount を増やす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tag,
+                },
+                UpdateExpression: 'SET gsi_sk = gsi_sk + :inc',
+                ExpressionAttributeValues: {
+                    ':inc': 1
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
         } else {
             // 新しいタグを作成
             tagId = uuidv4();
@@ -50,7 +64,9 @@ async function getAndGenerateTagIds(tags: string[]): Promise<Record<string, stri
                 TableName: tagTableName,
                 Item: {
                     tagname: tag,
-                    tagid: tagId
+                    tagid: tagId,
+                    gsi_pk: "templateCount",
+                    gsi_sk: 1,
                 }
             });
             await dynamoDb.send(putCommand);
@@ -159,10 +175,6 @@ async function updateTemplate(requestBody: Request): Promise<boolean> {
     // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
     // 営業, デザイナー, マーチャンタイザー は除外
     for (const [tagId, tagName] of Object.entries(deletedTags)) {
-        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
-            continue;
-        }
-
         // ここで DynamoDB に対してクエリーを実行します。
         const queryCommand = new QueryCommand({
             TableName: templateTableName,
@@ -173,6 +185,24 @@ async function updateTemplate(requestBody: Request): Promise<boolean> {
         });
 
         const queryResult = await dynamoDb.send(queryCommand);
+
+        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
+            continue;
+        }
+
         if (queryResult.Items && queryResult.Items.length === 0) {
             console.log(`Deleting tagId: ${tagId}, tagName: ${tagName}`);
 
@@ -184,9 +214,23 @@ async function updateTemplate(requestBody: Request): Promise<boolean> {
                 }
             });
             await dynamoDb.send(deleteCommand);
+        } else if (queryResult.Items && queryResult.Items.length > 0) {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
         }
     }
-    
+
     return true
 }
 

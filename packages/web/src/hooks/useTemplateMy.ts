@@ -8,6 +8,7 @@ import {
     UpdateTemplateResponse,
     DeleteTemplateRequest,
     DeleteTemplateResponse,
+    GetTagsResponse,
 } from 'generative-ai-use-cases-jp';
 
 
@@ -22,6 +23,10 @@ interface TemplateState {
     createTemplateAndReload: (request: CreateTemplateRequest) => Promise<CreateTemplateResponse>;
     updateTemplateAndReload: (request: UpdateTemplateRequest) => Promise<UpdateTemplateResponse>;
     deleteTemplateAndReload: (request: DeleteTemplateRequest) => Promise<DeleteTemplateResponse>;
+    tagList: GetTagsResponse;
+    getTagList: () => Promise<GetTagsResponse>;
+    readmoreTagList: (LastEvaluatedKey: string) => Promise<GetTagsResponse>;
+    setTagList: (data: GetTagsResponse) => void;
 }
 
 // zustand を使ったステート定義
@@ -91,6 +96,32 @@ const useTemplateStore = create<TemplateState>()((set) => {
         return response;
     }
 
+    // tagList の初期化
+    let tagList: GetTagsResponse = {
+        items: [],
+        LastEvaluatedKey: {}
+    };
+
+    // tagList の取得
+    const getTagList = async () => {
+        const result: Awaited<GetTagsResponse> = await api.getTags();
+        return result
+    }
+
+    // tagList を上書き
+    const setTagList = (data: GetTagsResponse) => {
+        set(() => ({
+            tagList: data
+        }));
+    }
+
+    // Read More ボタンを押したとき、データを追加で読みこむ
+    const readmoreTagList = async (lastEvaluatedKey: string) => {
+        console.log(lastEvaluatedKey);
+        const result: Awaited<GetTagsResponse> = await api.readmoreTags(lastEvaluatedKey);
+        return result;
+    }
+
     // 実際のステートの定義部分
     return {
         templateList: templateList,
@@ -102,6 +133,10 @@ const useTemplateStore = create<TemplateState>()((set) => {
         createTemplateAndReload: createTemplateAndReload,
         updateTemplateAndReload: updateTemplateAndReload,
         deleteTemplateAndReload: deleteTemplateAndReload,
+        tagList: tagList,
+        setTagList: setTagList,
+        getTagList: getTagList,
+        readmoreTagList: readmoreTagList,
     }
 })
 

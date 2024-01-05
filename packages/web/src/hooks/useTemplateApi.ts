@@ -6,6 +6,7 @@ import {
     UpdateTemplateResponse,
     DeleteTemplateRequest,
     DeleteTemplateResponse,
+    GetTagsResponse,
 } from 'generative-ai-use-cases-jp';
 import useHttp from './useHttp';
 
@@ -31,6 +32,14 @@ const useTemplatesApi = () => {
         deleteTemplate: async (request: DeleteTemplateRequest): Promise<DeleteTemplateResponse> => {
             const res = await http.delete<DeleteTemplateResponse, DeleteTemplateRequest>('/templates/' + request.id);
             return res.data;
+        },
+        getTags: async (): Promise<GetTagsResponse> => {
+            const response = await http.getWithPromise('/templates/tags');
+            return response.data;
+        },
+        readmoreTags: async (lastEvaluatedKey?: string): Promise<GetTagsResponse> => {
+            const response = await http.getWithPromise('/templates/tags?lastEvaluatedKey=' + lastEvaluatedKey);
+            return response.data;
         },
     };
 };

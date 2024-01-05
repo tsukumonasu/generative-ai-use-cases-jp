@@ -171,3 +171,18 @@ export type DeleteTemplateRequest = {
 export type DeleteTemplateResponse = {
   response: string;
 }
+
+export type Tag = {
+  tagname: string;
+  tagid: string;
+  gsi_pk: string;
+  gsi_sk: string;
+};
+
+
+export type GetTagsResponse = {
+  items: Tag[],
+  LastEvaluatedKey: {
+    [key: string]: string;
+  };
+}
