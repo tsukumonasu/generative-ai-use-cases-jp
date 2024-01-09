@@ -48,8 +48,9 @@ export class Template extends Construct {
         });
 
         // LSI の追加
+        const createDateLSIname = 'CreatedDateIndex';
         templateTable.addLocalSecondaryIndex({
-            indexName: 'CreatedDateIndex',
+            indexName: createDateLSIname,
             sortKey: {
                 name: 'createdDate',
                 type: ddb.AttributeType.STRING,
@@ -57,8 +58,9 @@ export class Template extends Construct {
         });
 
         // LSI の追加
+        const copyCountLSIname = 'CopyCountIndex';
         templateTable.addLocalSecondaryIndex({
-            indexName: 'CopyCountIndex',
+            indexName: copyCountLSIname,
             sortKey: {
                 name: 'copycount',
                 type: ddb.AttributeType.STRING,
@@ -87,6 +89,7 @@ export class Template extends Construct {
             }
         });
 
+        // templateCount を行うための GSI を追加
         const tagTableGsiIndexName = 'GSIIndex'
         tagTable.addGlobalSecondaryIndex({
             indexName: tagTableGsiIndexName,
@@ -97,6 +100,16 @@ export class Template extends Construct {
             sortKey: {
                 name: 'gsi_sk',
                 type: ddb.AttributeType.NUMBER,
+            }
+        });
+
+        // tagid 列の GSI を追加
+        const tagidGsiIndexName = 'GSIIndex_tagid'
+        tagTable.addGlobalSecondaryIndex({
+            indexName: tagidGsiIndexName,
+            partitionKey: {
+                name: 'tagid',
+                type: ddb.AttributeType.STRING,
             }
         });
 
@@ -183,6 +196,34 @@ export class Template extends Construct {
         templateTable.grantReadWriteData(getTagFunction);
         tagTable.grantReadWriteData(getTagFunction);
 
+        // タグの詳細取得関数
+        const getTagDetailFunction = new NodejsFunction(this, 'getTagDetail', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/getTagDetail.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TAG_TABLE_GSI_TAGID_NAME: tagidGsiIndexName,
+            },
+        });
+        templateTable.grantReadWriteData(getTagDetailFunction);
+        tagTable.grantReadWriteData(getTagDetailFunction);
+
+        // タグからテンプレート一覧を取得する関数
+        const getTemplatesByTagFunction = new NodejsFunction(this, 'getTemplatesByTag', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/getTemplateByTag.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TEMPLATE_TABLE_COPYCOUNT_LSI_NAME: copyCountLSIname,
+                TEMPLATE_TABLE_CREATEDDATE_LSI_NAME: createDateLSIname,
+            },
+        });
+        templateTable.grantReadWriteData(getTemplatesByTagFunction);
+        tagTable.grantReadWriteData(getTemplatesByTagFunction);
 
         // TODO : CDK でカスタムリソースを定義して実行すると、想定通りに Lambda 関数が実行されるが、CloudFormation の Stack Status が CREATE_IN_PROGRESS のまま動かない。一旦、カスタムリソースは止めておく。
         // const customResourceResult = new CustomResource(
@@ -247,7 +288,7 @@ export class Template extends Construct {
             commonAuthorizerProps
         )
 
-        // タグ取得
+        // タグ一覧の取得
         const tagsResource = templatesResource.addResource('tags');
         tagsResource.addMethod(
             'GET',
@@ -256,6 +297,30 @@ export class Template extends Construct {
                 ...commonAuthorizerProps,
                 requestParameters: {
                     'method.request.querystring.lastEvaluatedKey': false
+                }
+            }
+        );
+
+        // タグの詳細情報取得
+        const tagDetailResource = tagsResource.addResource('{tagId}');
+        tagDetailResource.addMethod(
+            'GET',
+            new LambdaIntegration(getTagDetailFunction),
+            {
+                ...commonAuthorizerProps,
+            }
+        );
+
+        // タグからテンプレート一覧を取得する
+        templatesResource.addMethod(
+            'GET',
+            new LambdaIntegration(getTemplatesByTagFunction),
+            {
+                ...commonAuthorizerProps,
+                requestParameters: {
+                    'method.request.querystring.tagid': true,
+                    'method.request.querystring.sortby': true,
+                    'method.request.querystring.lastEvaluatedKey': false,
                 }
             }
         );

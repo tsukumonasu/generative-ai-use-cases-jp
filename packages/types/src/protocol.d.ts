@@ -186,3 +186,18 @@ export type GetTagsResponse = {
     [key: string]: string;
   };
 }
+
+export type GetTagDetailResponse = Tag;
+
+export type GetTemplatesByTagRequest = {
+  tagid: string,
+  sortBy: 'createdDate' | 'copycount',
+  LastEvaluatedKey?: string,
+};
+
+export type GetTemplatesByTagResponse = {
+  items: Template[],
+  LastEvaluatedKey?: {
+    [key: string]: string;
+  };
+};

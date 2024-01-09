@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card from '../components/Card';
 import useTemplateMy from '../hooks/useTemplateMy';
 import Button from '../components/Button';
@@ -52,6 +53,11 @@ const TemplatesTagSelect: React.FC = () => {
         }
     };
 
+    const navigate = useNavigate();
+    const handleCardClick = (tagId : string) => {
+        navigate(`/templates/tags/${tagId}`);
+    };
+
     return (
         <div>
             <div className="invisible col-span-5 my-2 flex h-0 items-center justify-center text-xl font-semibold print:visible print:my-5 print:h-min lg:mb-14 lg:visible lg:my-5 lg:h-min">
@@ -59,7 +65,7 @@ const TemplatesTagSelect: React.FC = () => {
             </div>
             <div className="grid gap-5 mx-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:mx-32">
                 {Object.entries(tagList.items).map(([index, item]) => (
-                    <Card key={index} className="flex" label="">
+                    <Card key={index} className="flex hover:cursor-pointer hover:bg-gray-200" label="" onClick={() => handleCardClick(item.tagid)}>
                         <div className="font-medium grow text-lg">
                             {item.tagname}
                         </div>

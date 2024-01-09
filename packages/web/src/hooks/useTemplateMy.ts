@@ -9,6 +9,9 @@ import {
     DeleteTemplateRequest,
     DeleteTemplateResponse,
     GetTagsResponse,
+    GetTagDetailResponse,
+    GetTemplatesByTagRequest,
+    GetTemplatesByTagResponse,
 } from 'generative-ai-use-cases-jp';
 
 
@@ -27,6 +30,13 @@ interface TemplateState {
     getTagList: () => Promise<GetTagsResponse>;
     readmoreTagList: (LastEvaluatedKey: string) => Promise<GetTagsResponse>;
     setTagList: (data: GetTagsResponse) => void;
+    getTagDetail: (tagid: string) => Promise<GetTagDetailResponse>;
+    getTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
+    readmoreTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
+    templateListByTagSortCopycount: GetTemplatesByTagResponse;
+    setTemplateListByTagSortCopycount: (data: GetTemplatesByTagResponse) => void;
+    tagname: string,
+    setTagname: (tagname: string) => void;
 }
 
 // zustand を使ったステート定義
@@ -122,6 +132,46 @@ const useTemplateStore = create<TemplateState>()((set) => {
         return result;
     }
 
+    // tagid から tag の詳細を取得
+    const getTagDetail = async (tagid: string) => {
+        const result: Awaited<GetTagDetailResponse> = await api.getTagDetail(tagid);
+        return result;
+    }
+
+    // tagid から、紐づくテンプレートを取得
+    const getTemplatesByTag = async (request: GetTemplatesByTagRequest) => {
+        const result: Awaited<GetTemplatesByTagResponse> = await api.getTemplatesByTag(request);
+        return result;
+    }
+
+    // tagid から、紐づくテンプレートを取得
+    const readmoreTemplatesByTag = async (request: GetTemplatesByTagRequest) => {
+        const result: Awaited<GetTemplatesByTagResponse> = await api.readmoreTemplatesByTag(request);
+        return result;
+    }
+
+    // タグを使った templateList の初期化 (人気順)
+    let templateListByTagSortCopycount: GetTemplatesByTagResponse = {
+        items: [],
+        LastEvaluatedKey: {}
+    };
+
+    // タグを使った templateList を上書き (人気順)
+    const setTemplateListByTagSortCopycount = (data: GetTemplatesByTagResponse) => {
+        set(() => ({
+            templateListByTagSortCopycount: data
+        }));
+    }
+
+    const tagname = "";
+
+    // tagList を上書き
+    const setTagname = (tagname: string) => {
+        set(() => ({
+            tagname: tagname
+        }));
+    }
+
     // 実際のステートの定義部分
     return {
         templateList: templateList,
@@ -137,6 +187,13 @@ const useTemplateStore = create<TemplateState>()((set) => {
         setTagList: setTagList,
         getTagList: getTagList,
         readmoreTagList: readmoreTagList,
+        getTagDetail: getTagDetail,
+        getTemplatesByTag: getTemplatesByTag,
+        readmoreTemplatesByTag: readmoreTemplatesByTag,
+        templateListByTagSortCopycount: templateListByTagSortCopycount,
+        setTemplateListByTagSortCopycount: setTemplateListByTagSortCopycount,
+        tagname: tagname,
+        setTagname: setTagname,
     }
 })
 
