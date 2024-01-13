@@ -10,6 +10,7 @@ import {
     GetTagDetailResponse,
     GetTemplatesByTagRequest,
     GetTemplatesByTagResponse,
+    GetTemplateDetailResponse,
 } from 'generative-ai-use-cases-jp';
 import useHttp from './useHttp';
 
@@ -54,6 +55,10 @@ const useTemplatesApi = () => {
         },
         readmoreTemplatesByTag: async (request: GetTemplatesByTagRequest): Promise<GetTemplatesByTagResponse> => {
             const response = await http.getWithPromise('/templates?tag=' + request.tagid + '&sortby=' + request.sortBy + '&lastEvaluatedKey=' + request.LastEvaluatedKey);
+            return response.data;
+        },
+        getTemplateDetail: async (templateid: string): Promise<GetTemplateDetailResponse> => {
+            const response = await http.getWithPromise('/templates/' + templateid);
             return response.data;
         },
     };

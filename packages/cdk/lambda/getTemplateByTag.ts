@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, BatchGetCommand } from '@aws-sdk/lib-dynamodb';
 
 const client = new DynamoDBClient();
 const dynamoDb = DynamoDBDocumentClient.from(client);
@@ -58,9 +58,47 @@ async function getTemplatesByTag(parameters: URLParameters): Promise<Response> {
     console.log("QueryCommand : " + JSON.stringify(queryCommand));
 
     try {
+        // Tag に紐づく Template id の一覧を取得
         const { Items, LastEvaluatedKey } = await dynamoDb.send(queryCommand);
+
+        // Items が 0 件の場合は空の配列を返す
+        if (!Items || Items.length === 0) {
+            return {
+                items: [],
+                LastEvaluatedKey: LastEvaluatedKey as { [key: string]: string; }
+            };
+        }
+
+        // Template id を使って、Template の詳細情報を取得
+        // BatchGetItem を使用して複数のテンプレートを取得
+        const templateIds = (Items as Template[]).map(item => item.templateid);
+
+        const keys = templateIds.map((templateid: string) => ({
+            id: 'template#' + templateid,
+            templateid: templateid
+        }));
+
+        const batchGetCommand = new BatchGetCommand({
+            RequestItems: {
+                [tamplateTableName]: {
+                    Keys: keys
+                }
+            }
+        });
+
+        const { Responses } = await dynamoDb.send(batchGetCommand);
+        const templates: Template[] = Responses ? Responses[tamplateTableName].map((item: any) => {
+            // DynamoDBから取得したデータをTemplate型にキャストする
+            return item as Template;
+        }) : [];
+
+        // Sort the templates array to match the order of Items
+        const sortedTemplates = templates.sort((a: Template, b: Template) => {
+            return templateIds.indexOf(a.templateid) - templateIds.indexOf(b.templateid);
+        });
+
         return {
-            items: Items as Template[],
+            items: sortedTemplates as Template[],
             LastEvaluatedKey: LastEvaluatedKey as { [key: string]: string; }
         };
     } catch (error) {
@@ -100,6 +138,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     try {
         const response = await getTemplatesByTag(parameters);
+
+        console.log(response);
 
         return {
             statusCode: 200,

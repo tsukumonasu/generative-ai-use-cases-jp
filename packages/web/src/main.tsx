@@ -23,6 +23,7 @@ import TranscribePage from './pages/TranscribePage';
 import TemplatesMy from './pages/TemplatesMy.tsx';
 import TemplatesTagSelect from './pages/TemplatesTagSelect.tsx';
 import TemplatesByTag from './pages/TemplatesByTag.tsx';
+import TemplateDetail from './pages/TemplateDetail.tsx';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
 
@@ -94,6 +95,10 @@ const routes: RouteObject[] = [
   {
     path: '/templates/tags/:tagid',
     element: <TemplatesByTag />,
+  },
+  {
+    path: '/templates/:templateid',
+    element: <TemplateDetail />,
   },
   {
     path: '*',

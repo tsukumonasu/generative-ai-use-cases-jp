@@ -225,6 +225,21 @@ export class Template extends Construct {
         templateTable.grantReadWriteData(getTemplatesByTagFunction);
         tagTable.grantReadWriteData(getTemplatesByTagFunction);
 
+        // テンプレートの詳細を取得する関数
+        const getTemplatesDetailFunction = new NodejsFunction(this, 'getTemplatesDetailFunction', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/getTemplateDetail.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TEMPLATE_TABLE_COPYCOUNT_LSI_NAME: copyCountLSIname,
+                TEMPLATE_TABLE_CREATEDDATE_LSI_NAME: createDateLSIname,
+            },
+        });
+        templateTable.grantReadWriteData(getTemplatesDetailFunction);
+        tagTable.grantReadWriteData(getTemplatesDetailFunction);
+
         // TODO : CDK でカスタムリソースを定義して実行すると、想定通りに Lambda 関数が実行されるが、CloudFormation の Stack Status が CREATE_IN_PROGRESS のまま動かない。一旦、カスタムリソースは止めておく。
         // const customResourceResult = new CustomResource(
         //     this,
@@ -285,6 +300,12 @@ export class Template extends Construct {
         templateResource.addMethod(
             'DELETE',
             new LambdaIntegration(deleteTemplateFunction),
+            commonAuthorizerProps
+        )
+
+        templateResource.addMethod(
+            'GET',
+            new LambdaIntegration(getTemplatesDetailFunction),
             commonAuthorizerProps
         )
 

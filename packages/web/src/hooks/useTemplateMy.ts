@@ -12,6 +12,7 @@ import {
     GetTagDetailResponse,
     GetTemplatesByTagRequest,
     GetTemplatesByTagResponse,
+    GetTemplateDetailResponse,
 } from 'generative-ai-use-cases-jp';
 
 
@@ -33,10 +34,7 @@ interface TemplateState {
     getTagDetail: (tagid: string) => Promise<GetTagDetailResponse>;
     getTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
     readmoreTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
-    templateListByTagSortCopycount: GetTemplatesByTagResponse;
-    setTemplateListByTagSortCopycount: (data: GetTemplatesByTagResponse) => void;
-    tagname: string,
-    setTagname: (tagname: string) => void;
+    getTemplateDetail: (templateid: string) => Promise<GetTemplateDetailResponse>;
 }
 
 // zustand を使ったステート定義
@@ -150,26 +148,10 @@ const useTemplateStore = create<TemplateState>()((set) => {
         return result;
     }
 
-    // タグを使った templateList の初期化 (人気順)
-    let templateListByTagSortCopycount: GetTemplatesByTagResponse = {
-        items: [],
-        LastEvaluatedKey: {}
-    };
-
-    // タグを使った templateList を上書き (人気順)
-    const setTemplateListByTagSortCopycount = (data: GetTemplatesByTagResponse) => {
-        set(() => ({
-            templateListByTagSortCopycount: data
-        }));
-    }
-
-    const tagname = "";
-
-    // tagList を上書き
-    const setTagname = (tagname: string) => {
-        set(() => ({
-            tagname: tagname
-        }));
+    // templateid から Template の詳細を取得
+    const getTemplateDetail = async (templateid: string) => {
+        const result: Awaited<GetTemplateDetailResponse> = await api.getTemplateDetail(templateid);
+        return result;
     }
 
     // 実際のステートの定義部分
@@ -190,10 +172,7 @@ const useTemplateStore = create<TemplateState>()((set) => {
         getTagDetail: getTagDetail,
         getTemplatesByTag: getTemplatesByTag,
         readmoreTemplatesByTag: readmoreTemplatesByTag,
-        templateListByTagSortCopycount: templateListByTagSortCopycount,
-        setTemplateListByTagSortCopycount: setTemplateListByTagSortCopycount,
-        tagname: tagname,
-        setTagname: setTagname,
+        getTemplateDetail: getTemplateDetail,
     }
 })
 

@@ -201,3 +201,5 @@ export type GetTemplatesByTagResponse = {
     [key: string]: string;
   };
 };
+
+export type GetTemplateDetailResponse = Template;
