@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ButtonCopy from '../components/ButtonCopy';
@@ -18,6 +19,8 @@ import ModalWindowsForDeleteTemplate, { DeleteModalWindowHandle } from './Templa
 import { Template as TemplateType } from 'generative-ai-use-cases-jp';
 
 const TemplatesMy: React.FC = () => {
+  const navigate = useNavigate();
+
   // useTemplate で定義した API を取り出す
   const { 
     getTemplateList, 
@@ -77,6 +80,11 @@ const TemplatesMy: React.FC = () => {
     deleteModalWindow.current?.openModalWindow(template);
   };
 
+  // 指定した tag id の詳細ページに移動する関数
+  const navigateToTemplateByTag = (tagid: string) => {
+    navigate(`/templates/tags/${tagid}`);
+  };
+
   return (
     <div className="grid grid-cols-5 gap-4 pb-12">
       <div className="invisible col-span-5 my-2 flex h-0 items-center justify-center text-xl font-semibold print:visible print:my-5 print:h-min lg:visible lg:my-5 lg:h-min">
@@ -116,8 +124,12 @@ const TemplatesMy: React.FC = () => {
                 <div className="flex col-span-full">
                   {
                     Object.keys(template.tags).length > 0 ? (
-                      Object.entries(template.tags).map(([_key, value], index) => (
-                        <span key={index} className="text-sm mr-1 p-1 bg-gray-200 rounded">
+                      Object.entries(template.tags).map(([key, value], index) => (
+                        <span
+                          key={index}
+                          className="text-sm mr-1 p-1 bg-gray-200 rounded cursor-pointer hover:bg-gray-300"
+                          onClick={() => navigateToTemplateByTag(key)}
+                        >
                           {value}
                         </span>
                       ))
