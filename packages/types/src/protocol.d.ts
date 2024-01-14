@@ -128,7 +128,7 @@ export type Template = {
   usermailaddress: string;
   tags: Record<string, string>;
   createdDate: string;
-  copycount: string;
+  copycount: number;
   gsi_pk: string;
   gsi_sk: string;
 };
@@ -176,7 +176,7 @@ export type Tag = {
   tagname: string;
   tagid: string;
   gsi_pk: string;
-  gsi_sk: string;
+  gsi_sk: number;
 };
 
 

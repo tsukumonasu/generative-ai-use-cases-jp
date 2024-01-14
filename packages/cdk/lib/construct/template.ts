@@ -63,7 +63,7 @@ export class Template extends Construct {
             indexName: copyCountLSIname,
             sortKey: {
                 name: 'copycount',
-                type: ddb.AttributeType.STRING,
+                type: ddb.AttributeType.NUMBER,
             }
         });
 

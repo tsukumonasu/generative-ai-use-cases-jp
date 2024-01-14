@@ -49,7 +49,7 @@ const ModalWindowsForUpdateTemplate = forwardRef<UpdateModalWindowHandle, { upda
     usermailaddress: "",
     tags: {},
     createdDate: "",
-    copycount: "",
+    copycount: 0,
     gsi_pk: "",
     gsi_sk: "",
   };

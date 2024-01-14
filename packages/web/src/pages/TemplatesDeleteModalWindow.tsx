@@ -40,7 +40,7 @@ const ModalWindowsForDeleteTemplate = forwardRef<DeleteModalWindowHandle, { dele
         usermailaddress: "",
         tags: {},
         createdDate: "",
-        copycount: "",
+        copycount: 0,
         gsi_pk: "",
         gsi_sk: "",
     };

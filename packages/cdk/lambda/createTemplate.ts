@@ -15,7 +15,7 @@ interface Request {
     usermailaddress: string,
     tags: Record<string, string>;
     createdDate: string,
-    copycount: string,
+    copycount: number,
     gsi_pk: string,
     gsi_sk: string,
 }
@@ -157,7 +157,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             usermailaddress: usermailaddress,
             tags: tags,
             createdDate: timestamp,
-            copycount: "000000000000", // 文字列で 12 桁を持つ
+            copycount: 0, // 文字列で 12 桁を持つ
             gsi_pk: "userid",
             gsi_sk: userId + "#" + timestamp
         };
