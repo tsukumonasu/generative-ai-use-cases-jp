@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/Button';
+import ButtonCopyWithTemplateCopycountup from '../components/ButtonCopyWithTemplateCopycountup';
 import Card from '../components/Card';
-import ButtonCopy from '../components/ButtonCopy';
 import useTemplateMy from '../hooks/useTemplateMy';
 import { renderWithLineBreaks, truncateText } from '../utils/TemplateUtils';
 import {
@@ -103,7 +103,7 @@ const TemplatesMy: React.FC = () => {
           templateList.items.map((template, index) => (
             <Card className="relative gap-3 col-start-1 lg:col-start-2 col-end-6 lg:col-end-5 ml-2 mr-2 justify-end" key={index} label={template.title}>
               <div className="absolute top-0 right-0 flex items-center p-4">
-                <ButtonCopy text={template.prompt} />
+                <ButtonCopyWithTemplateCopycountup text={template.prompt} templateid={template.templateid}/>
                 <span className="text-sm font-medium">プロンプトコピー</span>
                 <div onClick={() => callUpdateModalWindow(template)} style={{ cursor: 'pointer' }}>
                   <PiNotePencil className="h-6 w-6 ml-6" />

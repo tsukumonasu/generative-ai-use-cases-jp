@@ -11,6 +11,7 @@ import {
     GetTemplatesByTagRequest,
     GetTemplatesByTagResponse,
     GetTemplateDetailResponse,
+    IncrementTemplateCopycountResponse,
 } from 'generative-ai-use-cases-jp';
 import useHttp from './useHttp';
 
@@ -35,6 +36,10 @@ const useTemplatesApi = () => {
         },
         deleteTemplate: async (request: DeleteTemplateRequest): Promise<DeleteTemplateResponse> => {
             const res = await http.delete<DeleteTemplateResponse, DeleteTemplateRequest>('/templates/' + request.id);
+            return res.data;
+        },
+        incrementTemplateCopycount: async (templateid: string): Promise<IncrementTemplateCopycountResponse> => {
+            const res = await http.post<IncrementTemplateCopycountResponse>('/templates/' + templateid + '/increment-copycount', templateid);
             return res.data;
         },
         getTags: async (): Promise<GetTagsResponse> => {

@@ -203,3 +203,7 @@ export type GetTemplatesByTagResponse = {
 };
 
 export type GetTemplateDetailResponse = Template;
+
+export type IncrementTemplateCopycountResponse = {
+  response: string;
+}

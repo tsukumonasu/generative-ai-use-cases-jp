@@ -13,6 +13,7 @@ import {
     GetTemplatesByTagRequest,
     GetTemplatesByTagResponse,
     GetTemplateDetailResponse,
+    IncrementTemplateCopycountResponse,
 } from 'generative-ai-use-cases-jp';
 
 
@@ -35,6 +36,7 @@ interface TemplateState {
     getTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
     readmoreTemplatesByTag: (request: GetTemplatesByTagRequest) => Promise<GetTemplatesByTagResponse>;
     getTemplateDetail: (templateid: string) => Promise<GetTemplateDetailResponse>;
+    incrementTemplateCopycount: (templateid: string) => Promise<IncrementTemplateCopycountResponse>;
 }
 
 // zustand を使ったステート定義
@@ -154,6 +156,13 @@ const useTemplateStore = create<TemplateState>()((set) => {
         return result;
     }
 
+    // Template の Copycount をカウントアップする
+    const incrementTemplateCopycount = async (templateid: string) => {
+        const result: Awaited<IncrementTemplateCopycountResponse> = await api.incrementTemplateCopycount(templateid);
+        return result;
+    }
+
+
     // 実際のステートの定義部分
     return {
         templateList: templateList,
@@ -173,6 +182,7 @@ const useTemplateStore = create<TemplateState>()((set) => {
         getTemplatesByTag: getTemplatesByTag,
         readmoreTemplatesByTag: readmoreTemplatesByTag,
         getTemplateDetail: getTemplateDetail,
+        incrementTemplateCopycount: incrementTemplateCopycount,
     }
 })
 

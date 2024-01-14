@@ -240,6 +240,21 @@ export class Template extends Construct {
         templateTable.grantReadWriteData(getTemplatesDetailFunction);
         tagTable.grantReadWriteData(getTemplatesDetailFunction);
 
+        // テンプレートの copycount をカウントアップする関数
+        const incrementTemplateCopycountFunction = new NodejsFunction(this, 'incrementTemplateCopycountFunction', {
+            runtime: Runtime.NODEJS_18_X,
+            entry: './lambda/incrementalTemplateCopycount.ts',
+            timeout: Duration.minutes(15),
+            environment: {
+                TEMPLATE_TABLE_NAME: templateTable.tableName,
+                TAG_TABLE_NAME: tagTable.tableName,
+                TEMPLATE_TABLE_COPYCOUNT_LSI_NAME: copyCountLSIname,
+                TEMPLATE_TABLE_CREATEDDATE_LSI_NAME: createDateLSIname,
+            },
+        });
+        templateTable.grantReadWriteData(incrementTemplateCopycountFunction);
+        tagTable.grantReadWriteData(incrementTemplateCopycountFunction);
+
         // TODO : CDK でカスタムリソースを定義して実行すると、想定通りに Lambda 関数が実行されるが、CloudFormation の Stack Status が CREATE_IN_PROGRESS のまま動かない。一旦、カスタムリソースは止めておく。
         // const customResourceResult = new CustomResource(
         //     this,
@@ -306,6 +321,14 @@ export class Template extends Construct {
         templateResource.addMethod(
             'GET',
             new LambdaIntegration(getTemplatesDetailFunction),
+            commonAuthorizerProps
+        )
+
+        // テンプレートの copycount を increment する
+        const incrementCopycount = templateResource.addResource('increment-copycount');
+        incrementCopycount.addMethod(
+            'POST',
+            new LambdaIntegration(incrementTemplateCopycountFunction),
             commonAuthorizerProps
         )
 

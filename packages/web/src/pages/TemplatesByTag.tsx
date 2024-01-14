@@ -8,8 +8,8 @@ import {
     Template,
 } from 'generative-ai-use-cases-jp';
 import { renderWithLineBreaks, truncateText } from '../utils/TemplateUtils';
-import ButtonCopy from '../components/ButtonCopy';
 import Button from '../components/Button';
+import ButtonCopyWithTemplateCopycountup from '../components/ButtonCopyWithTemplateCopycountup';
 import {
     PiDotsThreeCircle
 } from 'react-icons/pi';
@@ -108,40 +108,19 @@ const TemplatesByTag: React.FC = () => {
                     <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent "></div>
                 </div>
             ) : (
-                    <>
-                        <div className="invisible col-span-5 my-2 flex h-0 items-center justify-center text-xl font-semibold print:visible print:my-5 print:h-min lg:visible lg:my-5 lg:h-min">
-                            タグ : {tagname}
-                        </div>
-                        <div className="text-lg font-semibold col-start-1 lg:col-start-2 ml-2 col-span-full">
-                            人気のテンプレート (Top3)
-                        </div>
-                        {templateListByTagSortCopycount.items.length > 0 ? (
-                            templateListByTagSortCopycount.items.map((template, index) => (
-                                <React.Fragment key={index}>
-                                    <Card className="relative gap-3 col-start-1 lg:col-start-2 col-end-6 lg:col-end-5 ml-2 mr-2 justify-end" label={template.title}>
-                                        <div className="absolute top-0 right-0 flex items-center p-4">
-                                            <ButtonCopy text={template.prompt} />
-                                            <span className="text-sm font-medium">プロンプトコピー</span>
-                                            <div onClick={() => navigateToTemplateDetail(template)} style={{ cursor: 'pointer' }}>
-                                                <PiDotsThreeCircle className="h-6 w-6 ml-6" />
-                                            </div>
-                                            <span className="text-sm font-medium ml-1">詳細</span>
-                                        </div>
-                                        {renderWithLineBreaks(truncateText(template.prompt))}
-                                    </Card>
-                                </React.Fragment>
-                            ))
-                        ) : (
-                            <div className="col-span-full text-center">テンプレート無し</div>
-                        )}
-                        <div className="text-lg font-semibold col-start-1 lg:col-start-2 ml-2 col-span-full mt-28">
-                            テンプレート一覧 (最新日時順)
-                        </div>
-                        {templateListByCreatedDate.items.length > 0 ? (
-                            templateListByCreatedDate.items.map((template, index) => (
-                                <Card className="relative gap-3 col-start-1 lg:col-start-2 col-end-6 lg:col-end-5 ml-2 mr-2 justify-end" key={index} label={template.title}>
+                <>
+                    <div className="invisible col-span-5 my-2 flex h-0 items-center justify-center text-xl font-semibold print:visible print:my-5 print:h-min lg:visible lg:my-5 lg:h-min">
+                        タグ : {tagname}
+                    </div>
+                    <div className="text-lg font-semibold col-start-1 lg:col-start-2 ml-2 col-span-full">
+                        人気のテンプレート (Top3)
+                    </div>
+                    {templateListByTagSortCopycount.items.length > 0 ? (
+                        templateListByTagSortCopycount.items.map((template, index) => (
+                            <React.Fragment key={index}>
+                                <Card className="relative gap-3 col-start-1 lg:col-start-2 col-end-6 lg:col-end-5 ml-2 mr-2 justify-end" label={template.title}>
                                     <div className="absolute top-0 right-0 flex items-center p-4">
-                                        <ButtonCopy text={template.prompt} />
+                                        <ButtonCopyWithTemplateCopycountup text={template.prompt} templateid={template.templateid} />
                                         <span className="text-sm font-medium">プロンプトコピー</span>
                                         <div onClick={() => navigateToTemplateDetail(template)} style={{ cursor: 'pointer' }}>
                                             <PiDotsThreeCircle className="h-6 w-6 ml-6" />
@@ -150,24 +129,45 @@ const TemplatesByTag: React.FC = () => {
                                     </div>
                                     {renderWithLineBreaks(truncateText(template.prompt))}
                                 </Card>
-                            ))
-                        ) : (
-                            <div className="col-span-full text-center">テンプレート無し</div>
-                        )}
-                        {
-                            templateListByCreatedDate?.LastEvaluatedKey && (
-                                <Button className="shrink w-28 h-11 gap-3 col-start-3 justify-self-center" onClick={readMore}>
-                                    {
-                                        readmoreLoading ? (
-                                            <div className="h-5 w-5 animate-spin rounded-full border-4 border-t-transparent"></div>
-                                        ) : (
-                                            "Read More"
-                                        )
-                                    }
-                                </Button>
-                            )
-                        }
-                    </>
+                            </React.Fragment>
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center">テンプレート無し</div>
+                    )}
+                    <div className="text-lg font-semibold col-start-1 lg:col-start-2 ml-2 col-span-full mt-28">
+                        テンプレート一覧 (最新日時順)
+                    </div>
+                    {templateListByCreatedDate.items.length > 0 ? (
+                        templateListByCreatedDate.items.map((template, index) => (
+                            <Card className="relative gap-3 col-start-1 lg:col-start-2 col-end-6 lg:col-end-5 ml-2 mr-2 justify-end" key={index} label={template.title}>
+                                <div className="absolute top-0 right-0 flex items-center p-4">
+                                    <ButtonCopyWithTemplateCopycountup text={template.prompt} templateid={template.templateid} />
+                                    <span className="text-sm font-medium">プロンプトコピー</span>
+                                    <div onClick={() => navigateToTemplateDetail(template)} style={{ cursor: 'pointer' }}>
+                                        <PiDotsThreeCircle className="h-6 w-6 ml-6" />
+                                    </div>
+                                    <span className="text-sm font-medium ml-1">詳細</span>
+                                </div>
+                                {renderWithLineBreaks(truncateText(template.prompt))}
+                            </Card>
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center">テンプレート無し</div>
+                    )}
+                    {
+                        templateListByCreatedDate?.LastEvaluatedKey && (
+                            <Button className="shrink w-28 h-11 gap-3 col-start-3 justify-self-center" onClick={readMore}>
+                                {
+                                    readmoreLoading ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-4 border-t-transparent"></div>
+                                    ) : (
+                                        "Read More"
+                                    )
+                                }
+                            </Button>
+                        )
+                    }
+                </>
             )}
         </div>
     );
