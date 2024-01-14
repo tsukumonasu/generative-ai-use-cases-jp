@@ -56,15 +56,18 @@ async function updateTemplate(templateid: string): Promise<boolean> {
     for (const tagId of Object.keys(existTags)) {
         console.log('Processing tag#' + tagId);
 
-        const putCommand = new PutCommand({
+        const updateTagCommand = new UpdateCommand({
             TableName: templateTableName,
-            Item: {
-                id: 'tag#' + tagId,
-                templateid: templateid,
-                copycount: updateResult.Attributes.copycount,
+            Key: {
+                'id': 'tag#' + tagId,
+                'templateid': templateid
+            },
+            UpdateExpression: 'SET copycount = :copycount',
+            ExpressionAttributeValues: {
+                ':copycount': updateResult.Attributes.copycount
             }
-        })
-        const response = await dynamoDb.send(putCommand);
+        });
+        const response = await dynamoDb.send(updateTagCommand);
         if (!response || response.$metadata.httpStatusCode !== 200) {
             return false;
         }

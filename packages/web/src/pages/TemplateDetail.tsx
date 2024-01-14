@@ -5,7 +5,7 @@ import {
 } from 'generative-ai-use-cases-jp';
 import useTemplateMy from '../hooks/useTemplateMy';
 import { renderWithLineBreaks } from '../utils/TemplateUtils';
-import ButtonCopy from '../components/ButtonCopy';
+import ButtonCopyWithTemplateCopycountup from '../components/ButtonCopyWithTemplateCopycountup';
 import Button from '../components/Button';
 
 const TemplateDetail: React.FC = () => {
@@ -60,7 +60,7 @@ const TemplateDetail: React.FC = () => {
                 <div className="my-10 col-start-2 col-end-5 sm:col-start-3 sm:col-end-5 flex flex-col">
                     <p className="mt-10 mb-5 col-start-2 col-end-5 sm:col-start-3 sm:col-end-5">{renderWithLineBreaks(template?.prompt)}</p>
                     <div className="flex">
-                        <ButtonCopy text={template.prompt} />
+                        <ButtonCopyWithTemplateCopycountup text={template.prompt} templateid={template.templateid} />
                         <span className="mt-1 text-sm">コピー</span>
                     </div>
                 </div>

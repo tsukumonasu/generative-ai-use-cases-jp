@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
-
 const client = new DynamoDBClient();
 const dynamoDb = DynamoDBDocumentClient.from(client);
 
@@ -43,20 +42,6 @@ async function getAndGenerateTagIds(tags: string[]): Promise<Record<string, stri
         if (queryResult.Items && queryResult.Items.length > 0) {
             // 既存のタグが見つかった場合、そのtagidを使用
             tagId = queryResult.Items[0].tagid;
-
-            // templateCount を増やす
-            const updateCommand = new UpdateCommand({
-                TableName: tagTableName,
-                Key: {
-                    'tagname': tag,
-                },
-                UpdateExpression: 'SET gsi_sk = gsi_sk + :inc',
-                ExpressionAttributeValues: {
-                    ':inc': 1
-                }
-            });
-
-            await dynamoDb.send(updateCommand);
         } else {
             // 新しいタグを作成
             tagId = uuidv4();
@@ -78,12 +63,74 @@ async function getAndGenerateTagIds(tags: string[]): Promise<Record<string, stri
     return tagsRecord;
 }
 
+// tag テーブルの templateCount を集計して
+async function updateTemplateCount(taglist: Record<string, string>): Promise<void> {
+    const templateTableName = process.env.TEMPLATE_TABLE_NAME;
+    const tagTableName = process.env.TAG_TABLE_NAME;
+
+    // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
+    // 営業, デザイナー, マーチャンタイザー は除外
+    for (const [tagId, tagName] of Object.entries(taglist)) {
+        // ここで DynamoDB に対してクエリーを実行します。
+        const queryCommand = new QueryCommand({
+            TableName: templateTableName,
+            KeyConditionExpression: 'id = :id',
+            ExpressionAttributeValues: {
+                ':id': 'tag#' + tagId
+            }
+        });
+
+        const queryResult = await dynamoDb.send(queryCommand);
+
+        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
+            continue;
+        }
+
+        if (queryResult.Items && queryResult.Items.length === 0) {
+            console.log(`Deleting tagId: ${tagId}, tagName: ${tagName}`);
+
+            // タグに紐づくテンプレートがない場合、タグを削除する
+            const deleteCommand = new DeleteCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                }
+            });
+            await dynamoDb.send(deleteCommand);
+        } else if (queryResult.Items && queryResult.Items.length > 0) {
+            // タグテーブルの templateCount (gsi_sk) を減らす
+            const updateCommand = new UpdateCommand({
+                TableName: tagTableName,
+                Key: {
+                    'tagname': tagName,
+                },
+                UpdateExpression: 'SET gsi_sk = :newCount',
+                ExpressionAttributeValues: {
+                    ':newCount': queryResult.Items.length,
+                }
+            });
+
+            await dynamoDb.send(updateCommand);
+        }
+    }
+}
 
 // Template の更新
 async function updateTemplate(requestBody: Request): Promise<boolean> {
     const templateTableName = process.env.TEMPLATE_TABLE_NAME;
-    const tagTableName = process.env.TAG_TABLE_NAME;
-
 
     // DynamoDB 上に保存されている、更新前のデータを取得する
     const getCommand = new QueryCommand({
@@ -172,64 +219,9 @@ async function updateTemplate(requestBody: Request): Promise<boolean> {
         }
     }
 
-    // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
-    // 営業, デザイナー, マーチャンタイザー は除外
-    for (const [tagId, tagName] of Object.entries(deletedTags)) {
-        // ここで DynamoDB に対してクエリーを実行します。
-        const queryCommand = new QueryCommand({
-            TableName: templateTableName,
-            KeyConditionExpression: 'id = :id',
-            ExpressionAttributeValues: {
-                ':id': 'tag#' + tagId
-            }
-        });
-
-        const queryResult = await dynamoDb.send(queryCommand);
-
-        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
-            // タグテーブルの templateCount (gsi_sk) を減らす
-            const updateCommand = new UpdateCommand({
-                TableName: tagTableName,
-                Key: {
-                    'tagname': tagName,
-                },
-                UpdateExpression: 'SET gsi_sk = :newCount',
-                ExpressionAttributeValues: {
-                    ':newCount': queryResult.Items.length,
-                }
-            });
-
-            await dynamoDb.send(updateCommand);
-            continue;
-        }
-
-        if (queryResult.Items && queryResult.Items.length === 0) {
-            console.log(`Deleting tagId: ${tagId}, tagName: ${tagName}`);
-
-            // タグに紐づくテンプレートがない場合、タグを削除する
-            const deleteCommand = new DeleteCommand({
-                TableName: tagTableName,
-                Key: {
-                    'tagname': tagName,
-                }
-            });
-            await dynamoDb.send(deleteCommand);
-        } else if (queryResult.Items && queryResult.Items.length > 0) {
-            // タグテーブルの templateCount (gsi_sk) を減らす
-            const updateCommand = new UpdateCommand({
-                TableName: tagTableName,
-                Key: {
-                    'tagname': tagName,
-                },
-                UpdateExpression: 'SET gsi_sk = :newCount',
-                ExpressionAttributeValues: {
-                    ':newCount': queryResult.Items.length,
-                }
-            });
-
-            await dynamoDb.send(updateCommand);
-        }
-    }
+    // タグテーブルの TempltateCount を更新
+    await updateTemplateCount(deletedTags);
+    await updateTemplateCount(updatedTags);
 
     return true
 }
