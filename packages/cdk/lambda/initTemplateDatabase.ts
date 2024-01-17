@@ -15,9 +15,9 @@ export const handler: Handler = async (event: any, context: Context,) => {
     const ddbDocClient = DynamoDBDocumentClient.from(client);
     const tableName = process.env.TABLE_NAME;
     const items = [
-        { tagname: 'デザイナー', tagid: '00000000-0000-0000-0000-000000000001' },
-        { tagname: '営業', tagid: '00000000-0000-0000-0000-000000000002' },
-        { tagname: 'マーチャンタイザー', tagid: '00000000-0000-0000-0000-000000000003' },
+        { tagname: 'デザイナー', tagid: '00000000-0000-0000-0000-000000000001', gsi_pk: 'templateCount', gsi_sk: 0},
+        { tagname: '営業', tagid: '00000000-0000-0000-0000-000000000002', gsi_pk: 'templateCount', gsi_sk: 0 },
+        { tagname: 'マーチャンタイザー', tagid: '00000000-0000-0000-0000-000000000003', gsi_pk: 'templateCount', gsi_sk: 0 },
     ];
 
     for (const item of items) {
