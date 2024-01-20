@@ -171,13 +171,11 @@ export class GenerativeAiUseCasesStack extends Stack {
       value: JSON.stringify(api.endpointNames),
     });
 
-<<<<<<< HEAD
     new CfnOutput(this, 'RequireInitDataCommand', {
       value: "aws lambda invoke --function-name " + template.initDataFunctionName + " --payload '{}' output.json",
     });
-=======
+
     this.userPool = auth.userPool;
     this.userPoolClient = auth.client;
->>>>>>> main
   }
 }
