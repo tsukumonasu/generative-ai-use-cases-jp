@@ -63,7 +63,7 @@ async function deleteTemplate(templateid: string): Promise<boolean> {
     }
 
     // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
-    // 営業, デザイナー, マーチャンタイザー は除外
+    // 営業, デザイナー, マーチャンダイザー は除外
     for (const [tagId, tagName] of Object.entries(deletedTags)) {
         // ここで DynamoDB に対してクエリーを実行します。
         const queryCommand = new QueryCommand({
@@ -76,7 +76,7 @@ async function deleteTemplate(templateid: string): Promise<boolean> {
 
         const queryResult = await dynamoDb.send(queryCommand);
 
-        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
+        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンダイザー') {
             // タグテーブルの templateCount (gsi_sk) を減らす
             const updateCommand = new UpdateCommand({
                 TableName: tagTableName,

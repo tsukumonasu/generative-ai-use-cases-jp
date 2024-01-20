@@ -17,7 +17,7 @@ export const handler: Handler = async (event: any, context: Context,) => {
     const items = [
         { tagname: 'デザイナー', tagid: '00000000-0000-0000-0000-000000000001', gsi_pk: 'templateCount', gsi_sk: 0},
         { tagname: '営業', tagid: '00000000-0000-0000-0000-000000000002', gsi_pk: 'templateCount', gsi_sk: 0 },
-        { tagname: 'マーチャンタイザー', tagid: '00000000-0000-0000-0000-000000000003', gsi_pk: 'templateCount', gsi_sk: 0 },
+        { tagname: 'マーチャンダイザー', tagid: '00000000-0000-0000-0000-000000000003', gsi_pk: 'templateCount', gsi_sk: 0 },
     ];
 
     for (const item of items) {
@@ -52,7 +52,7 @@ export const handler: Handler = async (event: any, context: Context,) => {
 //         const items = [
 //             { name: 'デザイナー', tagid: '00000000-0000-0000-0000-000000000001' },
 //             { name: '営業', tagid: '00000000-0000-0000-0000-000000000002' },
-//             { name: 'マーチャンタイザー', tagid: '00000000-0000-0000-0000-000000000003' },
+//             { name: 'マーチャンダイザー', tagid: '00000000-0000-0000-0000-000000000003' },
 //         ];
 
 //         for (const item of items) {

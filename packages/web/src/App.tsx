@@ -129,7 +129,7 @@ const items: ItemProps[] = [
     display: 'template' as const,
   },
   {
-    label: 'マーチャンタイザー向け',
+    label: 'マーチャンダイザー向け',
     to: '/templates/tags/00000000-0000-0000-0000-000000000003',
     icon: <PiChatCenteredTextThin className="w-4 fill-white" />,
     display: 'template' as const,

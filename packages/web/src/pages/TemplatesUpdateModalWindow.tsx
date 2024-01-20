@@ -27,10 +27,10 @@ const ModalWindowsForUpdateTemplate = forwardRef<UpdateModalWindowHandle, { upda
       setPrompt(template.prompt);
       setShareSetting(template.public ? 'public' : 'private');
       
-      // タキヒヨー様専用の実装。「デザイナー」「営業」「マーチャンタイザー」のタグは特別な値となっていて、「タグ」として表示するではなく「主な利用ユーザー」欄で表示する。
-      // そのため、template.tags から、「デザイナー」「営業」「マーチャンタイザー」の文字で検索して、引っかかったら「主な利用ユーザー」として表示させることをしている。
-      // 同様に、template.tags から、「デザイナー」「営業」「マーチャンタイザー」のタグを削除することも行う。
-      const predefinedUseCases = ['デザイナー', '営業', 'マーチャンタイザー'];
+      // タキヒヨー様専用の実装。「デザイナー」「営業」「マーチャンダイザー」のタグは特別な値となっていて、「タグ」として表示するではなく「主な利用ユーザー」欄で表示する。
+      // そのため、template.tags から、「デザイナー」「営業」「マーチャンダイザー」の文字で検索して、引っかかったら「主な利用ユーザー」として表示させることをしている。
+      // 同様に、template.tags から、「デザイナー」「営業」「マーチャンダイザー」のタグを削除することも行う。
+      const predefinedUseCases = ['デザイナー', '営業', 'マーチャンダイザー'];
       const foundUseCase = Object.values(template.tags).find(value => predefinedUseCases.includes(value));
       const filteredTags = Object.values(template.tags).filter(tag => !predefinedUseCases.includes(tag));
 
@@ -251,7 +251,7 @@ const ModalWindowsForUpdateTemplate = forwardRef<UpdateModalWindowHandle, { upda
                                 <option value="">指定なし</option>
                                 <option value="デザイナー">デザイナー</option>
                                 <option value="営業">営業</option>
-                                <option value="マーチャンタイザー">マーチャンタイザー</option>
+                                <option value="マーチャンダイザー">マーチャンダイザー</option>
                               </select>
                             </div>
                           </div>

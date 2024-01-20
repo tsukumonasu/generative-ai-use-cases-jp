@@ -214,7 +214,7 @@ const ModalWindowsForCreateTemplate = forwardRef<CreateModalWindowHandle, { crea
                                 <option value="">指定なし</option>
                                 <option value="デザイナー">デザイナー</option>
                                 <option value="営業">営業</option>
-                                <option value="マーチャンタイザー">マーチャンタイザー</option>
+                                <option value="マーチャンダイザー">マーチャンダイザー</option>
                               </select>
                             </div>
                           </div>

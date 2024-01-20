@@ -69,7 +69,7 @@ async function updateTemplateCount(taglist: Record<string, string>): Promise<voi
     const tagTableName = process.env.TAG_TABLE_NAME;
 
     // タグに紐づくテンプレートが完全に 0 件になったときに、そのタグを削除する。
-    // 営業, デザイナー, マーチャンタイザー は除外
+    // 営業, デザイナー, マーチャンダイザー は除外
     for (const [tagId, tagName] of Object.entries(taglist)) {
         // ここで DynamoDB に対してクエリーを実行します。
         const queryCommand = new QueryCommand({
@@ -82,7 +82,7 @@ async function updateTemplateCount(taglist: Record<string, string>): Promise<voi
 
         const queryResult = await dynamoDb.send(queryCommand);
 
-        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンタイザー') {
+        if (tagName === '営業' || tagName === 'デザイナー' || tagName === 'マーチャンダイザー') {
             // タグテーブルの templateCount (gsi_sk) を減らす
             const updateCommand = new UpdateCommand({
                 TableName: tagTableName,
