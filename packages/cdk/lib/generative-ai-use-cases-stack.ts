@@ -11,6 +11,7 @@ import {
 } from './construct';
 import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { Template } from './construct/template';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 
 const errorMessageForBooleanContext = (key: string) => {
   return `${key} の設定でエラーになりました。原因として考えられるものは以下です。
@@ -27,6 +28,9 @@ interface GenerativeAiUseCasesStackProps extends StackProps {
 }
 
 export class GenerativeAiUseCasesStack extends Stack {
+  public readonly userPool: cognito.UserPool;
+  public readonly userPoolClient: cognito.UserPoolClient;
+
   constructor(
     scope: Construct,
     id: string,
@@ -167,8 +171,13 @@ export class GenerativeAiUseCasesStack extends Stack {
       value: JSON.stringify(api.endpointNames),
     });
 
+<<<<<<< HEAD
     new CfnOutput(this, 'RequireInitDataCommand', {
       value: "aws lambda invoke --function-name " + template.initDataFunctionName + " --payload '{}' output.json",
     });
+=======
+    this.userPool = auth.userPool;
+    this.userPoolClient = auth.client;
+>>>>>>> main
   }
 }
