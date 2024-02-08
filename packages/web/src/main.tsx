@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+import AuthWithUserpool from './components/AuthWithUserpool';
+import AuthWithSAML from './components/AuthWithSAML';
 import './index.css';
 import {
   RouterProvider,
@@ -25,8 +26,11 @@ import TemplatesMy from './pages/TemplatesMy.tsx';
 import TemplatesTagSelect from './pages/TemplatesTagSelect.tsx';
 import TemplatesByTag from './pages/TemplatesByTag.tsx';
 import TemplateDetail from './pages/TemplateDetail.tsx';
+import AgentChatPage from './pages/AgentChatPage.tsx';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
+const samlAuthEnabled: boolean = import.meta.env.VITE_APP_SAMLAUTH_ENABLED === 'true';
+const agentEnabled: boolean = import.meta.env.VITE_APP_AGENT_ENABLED === 'true';
 
 const routes: RouteObject[] = [
   {
@@ -89,6 +93,12 @@ const routes: RouteObject[] = [
         element: <KendraSearchPage />,
       }
     : null,
+  agentEnabled
+    ? {
+        path: '/agent',
+        element: <AgentChatPage />,
+      }
+    : null,
   {
     path: '/templates/mytemplate',
     element: <TemplatesMy />,
@@ -114,7 +124,7 @@ const routes: RouteObject[] = [
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <App />,
+    element: samlAuthEnabled ? <AuthWithSAML /> : <AuthWithUserpool />,
     children: routes,
   },
 ]);

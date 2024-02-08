@@ -14,6 +14,7 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { IdentityPool } from '@aws-cdk/aws-cognito-identitypool-alpha';
 import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { Agent, AgentMap } from 'generative-ai-use-cases-jp';
 
 export interface BackendApiProps {
   userPool: UserPool;
@@ -29,6 +30,7 @@ export class Api extends Construct {
   readonly imageGenerationModelIds: string[];
   readonly endpointNames: string[];
   readonly authorizer: CognitoUserPoolsAuthorizer;
+  readonly agentNames: string[];
 
   constructor(scope: Construct, id: string, props: BackendApiProps) {
     super(scope, id);
@@ -37,6 +39,8 @@ export class Api extends Construct {
 
     // region for bedrock / sagemaker
     const modelRegion = this.node.tryGetContext('modelRegion') || 'us-east-1';
+    // region for bedrock agent
+    const agentRegion = this.node.tryGetContext('agentRegion') || 'us-east-1';
 
     // Model IDs
     const modelIds: string[] = this.node.tryGetContext('modelIds') || [
@@ -47,6 +51,7 @@ export class Api extends Construct {
     ) || ['stability.stable-diffusion-xl-v0'];
     const endpointNames: string[] =
       this.node.tryGetContext('endpointNames') || [];
+    const agents: Agent[] = this.node.tryGetContext('agents') || [];
 
     // Validate Model Names
     const supportedModelIds = [
@@ -66,6 +71,13 @@ export class Api extends Construct {
       if (!supportedModelIds.includes(modelId)) {
         throw new Error(`Unsupported Model Name: ${modelId}`);
       }
+    }
+    const agentMap: AgentMap = {};
+    for (const agent of agents) {
+      agentMap[agent.displayName] = {
+        agentId: agent.agentId,
+        aliasId: agent.aliasId,
+      };
     }
 
     // Lambda
@@ -91,10 +103,13 @@ export class Api extends Construct {
         MODEL_REGION: modelRegion,
         MODEL_IDS: JSON.stringify(modelIds),
         IMAGE_GENERATION_MODEL_IDS: JSON.stringify(imageGenerationModelIds),
+        AGENT_REGION: agentRegion,
+        AGENT_MAP: JSON.stringify(agentMap),
       },
       bundling: {
         nodeModules: [
           '@aws-sdk/client-bedrock-runtime',
+          '@aws-sdk/client-bedrock-agent-runtime',
           // デフォルトの client-sagemaker-runtime のバージョンは StreamingResponse に
           // 対応していないため package.json に記載のバージョンを Bundle する
           '@aws-sdk/client-sagemaker-runtime',
@@ -469,6 +484,10 @@ export class Api extends Construct {
     this.modelIds = modelIds;
     this.imageGenerationModelIds = imageGenerationModelIds;
     this.endpointNames = endpointNames;
+<<<<<<< HEAD
     this.authorizer = authorizer;
+=======
+    this.agentNames = Object.keys(agentMap);
+>>>>>>> main
   }
 }
