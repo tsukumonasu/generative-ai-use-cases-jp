@@ -484,10 +484,7 @@ export class Api extends Construct {
     this.modelIds = modelIds;
     this.imageGenerationModelIds = imageGenerationModelIds;
     this.endpointNames = endpointNames;
-<<<<<<< HEAD
     this.authorizer = authorizer;
-=======
     this.agentNames = Object.keys(agentMap);
->>>>>>> main
   }
 }
