@@ -163,14 +163,34 @@ Knowledge base プロンプト例: キーワードで検索し情報を取得し
 
 `cdk.json` の `modelRegion`, `modelIds`, `imageGenerationModelIds` でモデルとモデルのリージョンを指定します。`modelIds` と `imageGenerationModelIds` は指定したリージョンで利用できるモデルの中から利用したいモデルのリストで指定してください。モデルの一覧は[ドキュメント](https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids-arns.html) をご確認ください。
 
+現状このソリューションが対応しているモデルは以下です
+
+```
+"anthropic.claude-3-sonnet-20240229-v1:0",
+"anthropic.claude-3-haiku-20240307-v1:0",
+"anthropic.claude-v2",
+"anthropic.claude-instant-v1",
+"meta.llama2-13b-chat-v1",
+"meta.llama2-70b-chat-v1",
+"mistral.mistral-7b-instruct-v0:2",
+"mistral.mixtral-8x7b-instruct-v0:1",
+```
+
 **指定したリージョンで指定したモデルが有効化されているかご確認ください。**
 
 ### us-east-1 (バージニア) の Amazon Bedrock のモデルを利用する例
 
 ```bash
   "modelRegion": "us-east-1",
-  "modelIds": ["anthropic.claude-v2","anthropic.claude-instant-v1"],
-  "imageGenerationModelIds": ["stability.stable-diffusion-xl-v0","stability.stable-diffusion-xl-v1","amazon.titan-image-generator-v1"],
+  "modelIds": [
+    "anthropic.claude-3-sonnet-20240229-v1:0",
+    "anthropic.claude-v2",
+    "anthropic.claude-instant-v1",
+  ],
+  "imageGenerationModelIds": [
+    "stability.stable-diffusion-xl-v1",
+    "amazon.titan-image-generator-v1"
+  ],
 ```
 
 ### ap-northeast-1 (東京) の Amazon Bedrock のモデルを利用する例
@@ -332,3 +352,18 @@ context の `dashboard` に `true` を設定します。(デフォルトは `fal
 続いて、Amazon Bedrock のログの出力を設定します。[Amazon Bedrock の Settings](https://console.aws.amazon.com/bedrock/home#settings) を開き、Model invocation logging を有効化します。Select the logging destinations には CloudWatch Logs only を選択してください。(S3 にも出力したい場合、Both S3 and CloudWatch Logs を選択しても構いません。) また、Log group name には `npm run cdk:deploy` 時に出力された `GenerativeAiUseCasesDashboardStack.BedrockLogGroup` を指定してください。(例: `GenerativeAiUseCasesDashboardStack-LogGroupAAAAAAAA-BBBBBBBBBBBB`) Service role は任意の名前で新規に作成してください。なお、Model invocation logging の設定は、context で `modelRegion` として指定しているリージョンで行うことに留意してください。
 
 設定完了後、`npm run cdk:deploy` 時に出力された `GenerativeAiUseCasesDashboardStack.DashboardUrl` を開いてください。
+
+## ファイルアップロード機能の有効化
+
+PDF や Excel などのファイルをアップロードしてテキストを抽出する、ファイルアップロード機能を利用することができます。対応しているファイルは、csv, doc, docx, md, pdf, ppt, pptx, tsv, xlsx です。
+
+**[packages/cdk/cdk.json](/packages/cdk/cdk.json) を編集**
+```
+{
+  "context": {
+    "recognizeFileEnabled": true
+  }
+}
+```
+
+ファイルアップロード機能は ECS (Fargate) 上で実行されます。そのため、有効化すると VPC が新たに作成されます。また、Fargate 上で動くコンテナのビルドを行うために、デプロイ用のマシンでは Docker がインストールされている必要があり、Docker デーモンが起動している必要があります。

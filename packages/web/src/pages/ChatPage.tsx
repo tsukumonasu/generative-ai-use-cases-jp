@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Location, useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import InputChatContent from '../components/InputChatContent';
 import useChat from '../hooks/useChat';
 import useChatApi from '../hooks/useChatApi';
@@ -10,33 +10,29 @@ import Button from '../components/Button';
 import ButtonCopy from '../components/ButtonCopy';
 import ModalDialog from '../components/ModalDialog';
 import ExpandableField from '../components/ExpandableField';
+import Switch from '../components/Switch';
+import Select from '../components/Select';
 import useScroll from '../hooks/useScroll';
 import { PiArrowClockwiseBold, PiShareFatFill } from 'react-icons/pi';
 import { create } from 'zustand';
 import { ReactComponent as BedrockIcon } from '../assets/bedrock.svg';
-import { ChatPageLocationState } from '../@types/navigate';
-import { SelectField } from '@aws-amplify/ui-react';
+import { ChatPageQueryParams } from '../@types/navigate';
 import { MODELS } from '../hooks/useModel';
+import { getPrompter } from '../prompts';
+import queryString from 'query-string';
+import useFiles from '../hooks/useFiles';
 
 type StateType = {
-  modelId: string;
   content: string;
   inputSystemContext: string;
-  setModelId: (c: string) => void;
   setContent: (c: string) => void;
   setInputSystemContext: (c: string) => void;
 };
 
 const useChatPageState = create<StateType>((set) => {
   return {
-    modelId: '',
     content: '',
     inputSystemContext: '',
-    setModelId: (s: string) => {
-      set(() => ({
-        modelId: s,
-      }));
-    },
     setContent: (s: string) => {
       set(() => ({
         content: s,
@@ -51,18 +47,15 @@ const useChatPageState = create<StateType>((set) => {
 });
 
 const ChatPage: React.FC = () => {
-  const {
-    modelId,
-    content,
-    inputSystemContext,
-    setModelId,
-    setContent,
-    setInputSystemContext,
-  } = useChatPageState();
-  const { state, pathname } = useLocation() as Location<ChatPageLocationState>;
+  const { content, inputSystemContext, setContent, setInputSystemContext } =
+    useChatPageState();
+  const { clear: clearFiles, uploadedFiles, uploadFiles } = useFiles();
+  const { pathname, search } = useLocation();
   const { chatId } = useParams();
 
   const {
+    getModelId,
+    setModelId,
     loading,
     loadingMessages,
     isEmpty,
@@ -71,13 +64,26 @@ const ChatPage: React.FC = () => {
     clear,
     postChat,
     updateSystemContext,
+    updateSystemContextByModel,
     getCurrentSystemContext,
   } = useChat(pathname, chatId);
   const { createShareId, findShareId, deleteShareId } = useChatApi();
   const { scrollToBottom, scrollToTop } = useScroll();
   const { getConversationTitle } = useConversation();
-  const { modelIds: availableModels, textModels } = MODELS;
+  const { modelIds: availableModels } = MODELS;
   const { data: share, mutate: reloadShare } = findShareId(chatId);
+  const modelId = getModelId();
+  const prompter = useMemo(() => {
+    return getPrompter(modelId);
+  }, [modelId]);
+
+  useEffect(() => {
+    // 会話履歴のページではモデルを変更してもシステムコンテキストを変更しない
+    if (!chatId) {
+      updateSystemContextByModel();
+    }
+    // eslint-disable-next-line  react-hooks/exhaustive-deps
+  }, [prompter]);
 
   const title = useMemo(() => {
     if (chatId) {
@@ -87,35 +93,46 @@ const ChatPage: React.FC = () => {
     }
   }, [chatId, getConversationTitle]);
 
+  const fileUpload = useMemo(() => {
+    return MODELS.multiModalModelIds.includes(modelId);
+  }, [modelId]);
+
   useEffect(() => {
-    if (state !== null) {
-      if (state.systemContext !== '') {
-        updateSystemContext(state.systemContext);
+    const _modelId = !modelId ? availableModels[0] : modelId;
+
+    if (search !== '') {
+      const params = queryString.parse(search) as ChatPageQueryParams;
+      if (params.systemContext && params.systemContext !== '') {
+        updateSystemContext(params.systemContext);
       } else {
         clear();
         setInputSystemContext(currentSystemContext);
       }
-
-      setContent(state.content);
+      setContent(params.content ?? '');
+      setModelId(
+        availableModels.includes(params.modelId ?? '')
+          ? params.modelId!
+          : _modelId
+      );
+    } else {
+      setModelId(_modelId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, setContent]);
-
-  useEffect(() => {
-    if (!modelId) {
-      setModelId(availableModels[0]);
-    }
-  }, [modelId, availableModels, setModelId]);
+  }, [search, setContent, availableModels, pathname]);
 
   const onSend = useCallback(() => {
     postChat(
-      content,
+      prompter.chatPrompt({ content }),
       false,
-      textModels.find((m) => m.modelId === modelId)
+      undefined,
+      undefined,
+      undefined,
+      fileUpload ? uploadedFiles : undefined
     );
     setContent('');
+    clearFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modelId, content]);
+  }, [content, uploadedFiles, fileUpload]);
 
   const onReset = useCallback(() => {
     clear();
@@ -126,6 +143,7 @@ const ChatPage: React.FC = () => {
   const [creatingShareId, setCreatingShareId] = useState(false);
   const [deletingShareId, setDeletingShareId] = useState(false);
   const [showShareIdModal, setShowShareIdModal] = useState(false);
+  const [isOver, setIsOver] = useState(false);
 
   const onCreateShareId = useCallback(async () => {
     try {
@@ -186,25 +204,66 @@ const ChatPage: React.FC = () => {
     setInputSystemContext(currentSystemContext);
   }, [currentSystemContext, setInputSystemContext]);
 
+  const onClickSamplePrompt = useCallback(
+    (params: ChatPageQueryParams) => {
+      setContent(params.content ?? '');
+      updateSystemContext(params.systemContext ?? '');
+    },
+    [setContent, updateSystemContext]
+  );
+
+  const handleDragOver = (event: React.DragEvent) => {
+    // ファイルドラッグ時にオーバーレイを表示
+    event.preventDefault();
+    setIsOver(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    // ファイルドラッグ時にオーバーレイを非表示
+    event.preventDefault();
+    setIsOver(false);
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    // ファイルドロップ時にファイルを追加
+    event.preventDefault();
+    setIsOver(false);
+    if (event.dataTransfer.files) {
+      // ファイルを反映しアップロード
+      uploadFiles(Array.from(event.dataTransfer.files));
+    }
+  };
+
   return (
     <>
-      <div className={`${!isEmpty ? 'screen:pb-36' : ''} relative`}>
-        <div className="invisible my-0 flex h-0 items-center justify-center text-xl font-semibold print:visible print:my-5 print:h-min lg:visible lg:my-5 lg:h-min">
+      <div
+        onDragOver={fileUpload ? handleDragOver : undefined}
+        className={`${!isEmpty ? 'screen:pb-36' : ''} relative`}>
+        <div className="invisible my-0 flex h-0 items-center justify-center text-xl font-semibold lg:visible lg:my-5 lg:h-min print:visible print:my-5 print:h-min">
           {title}
         </div>
 
+        {isOver && fileUpload && (
+          <div
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className="fixed bottom-0 left-0 right-0 top-0 z-[999] bg-slate-300 p-10 text-center">
+            <div className="flex h-full w-full items-center justify-center outline-dashed">
+              <div className="font-bold">
+                ファイルをドロップしてアップロード
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mt-2 flex w-full items-end justify-center lg:mt-0">
-          <SelectField
-            label="モデル"
-            labelHidden
+          <Select
             value={modelId}
-            onChange={(e) => setModelId(e.target.value)}>
-            {availableModels.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </SelectField>
+            onChange={setModelId}
+            options={availableModels.map((m) => {
+              return { value: m, label: m };
+            })}
+          />
         </div>
 
         {((isEmpty && !loadingMessages) || loadingMessages) && (
@@ -231,21 +290,11 @@ const ChatPage: React.FC = () => {
                 </button>
               </div>
             )}
-            <label className="relative inline-flex cursor-pointer items-center hover:underline">
-              <input
-                type="checkbox"
-                value=""
-                className="peer sr-only"
-                checked={showSystemContext}
-                onChange={() => {
-                  setShowSystemContext(!showSystemContext);
-                }}
-              />
-              <div className="peer-checked:bg-aws-smile peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white rtl:peer-checked:after:-translate-x-full"></div>
-              <span className="ml-1 text-xs font-medium">
-                システムコンテキストの表示
-              </span>
-            </label>
+            <Switch
+              checked={showSystemContext}
+              onSwitch={setShowSystemContext}
+              label="システムコンテキストの表示"
+            />
           </div>
         )}
 
@@ -263,7 +312,7 @@ const ChatPage: React.FC = () => {
             </div>
           ))}
 
-        <div className="fixed bottom-0 z-0 flex w-full flex-col items-center justify-center print:hidden lg:pr-64">
+        <div className="fixed bottom-0 z-0 flex w-full flex-col items-center justify-center lg:pr-64 print:hidden">
           {isEmpty && !loadingMessages && !chatId && (
             <ExpandableField
               label="システムコンテキスト"
@@ -305,11 +354,14 @@ const ChatPage: React.FC = () => {
               onSend();
             }}
             onReset={onReset}
+            fileUpload={fileUpload}
           />
         </div>
       </div>
 
-      {isEmpty && !loadingMessages && <PromptList />}
+      {isEmpty && !loadingMessages && (
+        <PromptList onClick={onClickSamplePrompt} />
+      )}
 
       <ModalDialog
         isOpen={showShareIdModal}

@@ -17,12 +17,14 @@ export interface WebProps {
   webAclId?: string;
   modelRegion: string;
   modelIds: string[];
+  multiModalModelIds: string[];
   imageGenerationModelIds: string[];
   endpointNames: string[];
   samlAuthEnabled: boolean;
   samlCognitoDomainName: string;
   samlCognitoFederatedIdentityProviderName: string;
   agentNames: string[];
+  recognizeFileEnabled: boolean;
 }
 
 export class Web extends Construct {
@@ -114,12 +116,18 @@ export class Web extends Construct {
         VITE_APP_SELF_SIGN_UP_ENABLED: props.selfSignUpEnabled.toString(),
         VITE_APP_MODEL_REGION: props.modelRegion,
         VITE_APP_MODEL_IDS: JSON.stringify(props.modelIds),
+        VITE_APP_MULTI_MODAL_MODEL_IDS: JSON.stringify(
+          props.multiModalModelIds
+        ),
         VITE_APP_IMAGE_MODEL_IDS: JSON.stringify(props.imageGenerationModelIds),
         VITE_APP_ENDPOINT_NAMES: JSON.stringify(props.endpointNames),
         VITE_APP_SAMLAUTH_ENABLED: props.samlAuthEnabled.toString(),
-        VITE_APP_SAML_COGNITO_DOMAIN_NAME: props.samlCognitoDomainName.toString(),
-        VITE_APP_SAML_COGNITO_FEDERATED_IDENTITY_PROVIDER_NAME: props.samlCognitoFederatedIdentityProviderName.toString(),
+        VITE_APP_SAML_COGNITO_DOMAIN_NAME:
+          props.samlCognitoDomainName.toString(),
+        VITE_APP_SAML_COGNITO_FEDERATED_IDENTITY_PROVIDER_NAME:
+          props.samlCognitoFederatedIdentityProviderName.toString(),
         VITE_APP_AGENT_NAMES: JSON.stringify(props.agentNames),
+        VITE_APP_RECOGNIZE_FILE_ENABLED: props.recognizeFileEnabled.toString(),
       },
     });
 

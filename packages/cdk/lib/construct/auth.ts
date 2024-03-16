@@ -8,12 +8,15 @@ import {
   IdentityPool,
   UserPoolAuthenticationProvider,
 } from '@aws-cdk/aws-cognito-identitypool-alpha';
+import { Effect, Policy, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 
 export interface AuthProps {
   selfSignUpEnabled: boolean;
+  allowedIpV4AddressRanges: string[] | null;
+  allowedIpV6AddressRanges: string[] | null;
   allowedSignUpEmailDomains: string[] | null | undefined;
   samlAuthEnabled: boolean;
 }
@@ -28,7 +31,9 @@ export class Auth extends Construct {
 
     const userPool = new UserPool(this, 'UserPool', {
       // SAML 認証を有効化する場合、UserPool を利用したセルフサインアップは利用しない。セキュリティを意識して閉じる。
-      selfSignUpEnabled: props.samlAuthEnabled ? false : props.selfSignUpEnabled, 
+      selfSignUpEnabled: props.samlAuthEnabled
+        ? false
+        : props.selfSignUpEnabled,
       signInAliases: {
         username: false,
         email: true,
@@ -55,6 +60,34 @@ export class Auth extends Construct {
         ],
       },
     });
+
+    if (props.allowedIpV4AddressRanges || props.allowedIpV6AddressRanges) {
+      const ipRanges = [
+        ...(props.allowedIpV4AddressRanges
+          ? props.allowedIpV4AddressRanges
+          : []),
+        ...(props.allowedIpV6AddressRanges
+          ? props.allowedIpV6AddressRanges
+          : []),
+      ];
+
+      idPool.authenticatedRole.attachInlinePolicy(
+        new Policy(this, 'SourceIpPolicy', {
+          statements: [
+            new PolicyStatement({
+              effect: Effect.DENY,
+              resources: ['*'],
+              actions: ['*'],
+              conditions: {
+                NotIpAddress: {
+                  'aws:SourceIp': ipRanges,
+                },
+              },
+            }),
+          ],
+        })
+      );
+    }
 
     // Lambda
     if (props.allowedSignUpEmailDomains) {

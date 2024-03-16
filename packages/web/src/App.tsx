@@ -18,6 +18,7 @@ import {
   PiBookOpen,
   PiChatCenteredTextThin,
   PiRobot,
+  PiUploadSimple,
 } from 'react-icons/pi';
 import { Outlet } from 'react-router-dom';
 import Drawer, { ItemProps } from './components/Drawer';
@@ -30,6 +31,8 @@ import useInterUseCases from './hooks/useInterUseCases';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
 const agentEnabled: boolean = import.meta.env.VITE_APP_AGENT_ENABLED === 'true';
+const recognizeFileEnabled: boolean =
+  import.meta.env.VITE_APP_RECOGNIZE_FILE_ENABLED === 'true';
 
 const items: ItemProps[] = [
   {
@@ -108,6 +111,14 @@ const items: ItemProps[] = [
     icon: <PiSpeakerHighBold />,
     display: 'tool' as const,
   },
+  recognizeFileEnabled
+    ? {
+        label: 'ファイルアップロード',
+        to: '/file',
+        icon: <PiUploadSimple />,
+        display: 'tool' as const,
+      }
+    : null,
   ragEnabled
     ? {
         label: 'Kendra 検索',
@@ -176,7 +187,7 @@ const App: React.FC = () => {
   return (
     <div className="screen:w-screen screen:h-screen overflow-x-hidden">
       <main className="flex-1">
-        <header className="bg-aws-squid-ink visible flex h-12 w-full items-center justify-between text-lg text-white print:hidden lg:invisible lg:h-0">
+        <header className="bg-aws-squid-ink visible flex h-12 w-full items-center justify-between text-lg text-white lg:invisible lg:h-0 print:hidden">
           <div className="flex w-10 items-center justify-start">
             <button
               className="focus:ring-aws-sky mr-2 rounded-full  p-2 hover:opacity-50 focus:outline-none focus:ring-1"
@@ -202,9 +213,7 @@ const App: React.FC = () => {
 
         <div
           id="smallDrawerFiller"
-          className={`${
-            isOpenDrawer ? 'visible' : 'invisible'
-          } lg:invisible`}>
+          className={`${isOpenDrawer ? 'visible' : 'invisible'} lg:invisible`}>
           <div
             className="screen:h-screen fixed top-0 z-40 w-screen bg-gray-900/90"
             onClick={switchDrawer}></div>

@@ -8,6 +8,8 @@ import {
   Chat,
   ListChatsResponse,
   Role,
+  UploadedFileType,
+  ExtraData,
   Model,
 } from 'generative-ai-use-cases-jp';
 import { useEffect, useMemo } from 'react';
@@ -15,7 +17,8 @@ import { v4 as uuid } from 'uuid';
 import useChatApi from './useChatApi';
 import useConversation from './useConversation';
 import { KeyedMutator } from 'swr';
-import { getSystemContextById } from '../prompts';
+import { getPrompter } from '../prompts';
+import { findModelByModelId } from './useModel';
 
 const useChatState = create<{
   chats: {
@@ -24,9 +27,14 @@ const useChatState = create<{
       messages: ShownMessage[];
     };
   };
+  modelIds: {
+    [id: string]: string;
+  };
   loading: {
     [id: string]: boolean;
   };
+  getModelId: (id: string) => string;
+  setModelId: (id: string, newModelId: string) => void;
   setLoading: (id: string, newLoading: boolean) => void;
   init: (id: string) => void;
   clear: (id: string) => void;
@@ -40,9 +48,10 @@ const useChatState = create<{
     content: string,
     mutateListChat: KeyedMutator<ListChatsResponse>,
     ignoreHistory: boolean,
-    model: Model | undefined,
     preProcessInput: ((message: ShownMessage[]) => ShownMessage[]) | undefined,
-    postProcessOutput: ((message: string) => string) | undefined
+    postProcessOutput: ((message: string) => string) | undefined,
+    sessionId: string | undefined,
+    extraData: UploadedFileType[] | undefined
   ) => void;
   sendFeedback: (
     id: string,
@@ -57,6 +66,21 @@ const useChatState = create<{
     predictStream,
     predictTitle,
   } = useChatApi();
+
+  const getModelId = (id: string) => {
+    return get().modelIds[id] || '';
+  };
+
+  const setModelId = (id: string, newModelId: string) => {
+    set((state) => {
+      return {
+        modelIds: {
+          ...state.modelIds,
+          [id]: newModelId,
+        },
+      };
+    });
+  };
 
   const setLoading = (id: string, newLoading: boolean) => {
     set((state) => {
@@ -83,7 +107,9 @@ const useChatState = create<{
   };
 
   const initChatWithSystemContext = (id: string) => {
-    const systemContext = getSystemContextById(id);
+    const prompter = getPrompter(getModelId(id));
+    const systemContext = prompter.systemContext(id);
+
     initChat(id, [{ role: 'system', content: systemContext }], undefined);
   };
 
@@ -100,9 +126,15 @@ const useChatState = create<{
   };
 
   const setPredictedTitle = async (id: string) => {
+    const modelId = getModelId(id);
+    const model = findModelByModelId(modelId)!;
+    const prompter = getPrompter(modelId);
     const title = await predictTitle({
+      model,
       chat: get().chats[id].chat!,
-      messages: omitUnusedMessageProperties(get().chats[id].messages),
+      prompt: prompter.setTitlePrompt({
+        messages: omitUnusedMessageProperties(get().chats[id].messages),
+      }),
     });
     setTitle(id, title);
   };
@@ -148,7 +180,7 @@ const useChatState = create<{
             }
             // 参照が切れるとエラーになるため clone する
             toBeRecordedMessages.push(
-              Object.assign({}, m as ToBeRecordedMessage)
+              JSON.parse(JSON.stringify(m)) as ToBeRecordedMessage
             );
           }
         }
@@ -182,6 +214,38 @@ const useChatState = create<{
     });
   };
 
+  const formatMessageProperties = (
+    messages: ShownMessage[],
+    uploadedFiles?: UploadedFileType[]
+  ): UnrecordedMessage[] => {
+    return messages.map((m) => {
+      // LLM で推論する形式に extraData を変換する
+      const extraData: ExtraData[] | undefined = m.extraData?.flatMap(
+        (data) => {
+          // 推論する際は"data:image/png..." のといった情報は必要ないため、削除する
+          const base64EncodedImage = uploadedFiles
+            ?.find((uploadedFile) => uploadedFile.s3Url === data.source.data)
+            ?.base64EncodedImage?.replace(/^data:(.*,)?/, '');
+
+          // Base64 エンコードされた画像情報を設定する
+          return {
+            type: 'image',
+            source: {
+              type: 'base64',
+              mediaType: data.source.mediaType,
+              data: base64EncodedImage ?? '',
+            },
+          };
+        }
+      );
+      return {
+        role: m.role,
+        content: m.content,
+        extraData: extraData?.filter((data) => data.source.data !== ''),
+      };
+    });
+  };
+
   const omitUnusedMessageProperties = (
     messages: ShownMessage[]
   ): UnrecordedMessage[] => {
@@ -193,9 +257,39 @@ const useChatState = create<{
     });
   };
 
+  const addChunkToAssistantMessage = (
+    id: string,
+    chunk: string,
+    model?: Model
+  ) => {
+    set((state) => {
+      const newChats = produce(state.chats, (draft) => {
+        const oldAssistantMessage = draft[id].messages.pop()!;
+        const newAssistantMessage: UnrecordedMessage = {
+          role: 'assistant',
+          // 新規モデル追加時は、デフォルトで Claude の prompter が利用されるため
+          // 出力が <output></output> で囲まれる可能性がある
+          // 以下の処理ではそれに対応するため、<output></output> xml タグを削除している
+          content: (oldAssistantMessage.content + chunk).replace(
+            /(<output>|<\/output>)/g,
+            ''
+          ),
+          llmType: model?.modelId,
+        };
+        draft[id].messages.push(newAssistantMessage);
+      });
+      return {
+        chats: newChats,
+      };
+    });
+  };
+
   return {
     chats: {},
+    modelIds: {},
     loading: {},
+    getModelId,
+    setModelId,
     setLoading,
     init: (id: string) => {
       if (!get().chats[id]) {
@@ -267,17 +361,46 @@ const useChatState = create<{
       content: string,
       mutateListChat,
       ignoreHistory: boolean,
-      model: Model | undefined,
       preProcessInput:
         | ((message: ShownMessage[]) => ShownMessage[])
         | undefined = undefined,
-      postProcessOutput: ((message: string) => string) | undefined = undefined
+      postProcessOutput: ((message: string) => string) | undefined = undefined,
+      sessionId: string | undefined = undefined,
+      uploadedFiles: UploadedFileType[] | undefined = undefined
     ) => {
+      const modelId = get().modelIds[id];
+
+      if (!modelId) {
+        console.error('modelId is not set');
+        return;
+      }
+
+      const model = findModelByModelId(modelId);
+
+      if (!model) {
+        console.error(`model not found for ${modelId}`);
+        return;
+      }
+
+      // Agent 用の対応
+      if (sessionId) {
+        model.sessionId = sessionId;
+      }
+
       setLoading(id, true);
 
       const unrecordedUserMessage: UnrecordedMessage = {
         role: 'user',
         content,
+        // DDB に保存する形式で、extraData を設定する
+        extraData: uploadedFiles?.map((uploadedFile) => ({
+          type: 'image',
+          source: {
+            type: 's3',
+            mediaType: uploadedFile.file.type,
+            data: uploadedFile.s3Url ?? '',
+          },
+        })),
       };
 
       const unrecordedAssistantMessage: UnrecordedMessage = {
@@ -311,30 +434,33 @@ const useChatState = create<{
       }
 
       // LLM へのリクエスト
+      const formattedMessages = formatMessageProperties(
+        inputMessages,
+        uploadedFiles
+      );
       const stream = predictStream({
         model: model,
-        messages: omitUnusedMessageProperties(inputMessages),
+        messages: formattedMessages,
       });
 
       // Assistant の発言を更新
+      let tmpChunk = '';
+
       for await (const chunk of stream) {
-        set((state) => {
-          const newChats = produce(state.chats, (draft) => {
-            const oldAssistantMessage = draft[id].messages.pop()!;
-            const newAssistantMessage: UnrecordedMessage = {
-              role: 'assistant',
-              content: (oldAssistantMessage.content + chunk).replace(
-                /(<output>|<\/output>)/g,
-                ''
-              ),
-              llmType: model?.modelId,
-            };
-            draft[id].messages.push(newAssistantMessage);
-          });
-          return {
-            chats: newChats,
-          };
-        });
+        tmpChunk += chunk;
+
+        // chunk は 10 文字以上でまとめて処理する
+        // バッファリングしないと以下のエラーが出る
+        // Maximum update depth exceeded
+        if (tmpChunk.length >= 10) {
+          addChunkToAssistantMessage(id, tmpChunk, model);
+          tmpChunk = '';
+        }
+      }
+
+      // tmpChunk に文字列が残っている場合は処理する
+      if (tmpChunk.length > 0) {
+        addChunkToAssistantMessage(id, tmpChunk, model);
       }
 
       // メッセージの後処理（例：footnote の付与）
@@ -399,6 +525,8 @@ const useChat = (id: string, chatId?: string) => {
   const {
     chats,
     loading,
+    getModelId,
+    setModelId,
     setLoading,
     init,
     clear,
@@ -437,6 +565,12 @@ const useChat = (id: string, chatId?: string) => {
 
   return {
     loading: loading[id] ?? false,
+    getModelId: () => {
+      return getModelId(id);
+    },
+    setModelId: (newModelId: string) => {
+      setModelId(id, newModelId);
+    },
     setLoading: (newLoading: boolean) => {
       setLoading(id, newLoading);
     },
@@ -450,6 +584,11 @@ const useChat = (id: string, chatId?: string) => {
     updateSystemContext: (systemContext: string) => {
       updateSystemContext(id, systemContext);
     },
+    updateSystemContextByModel: () => {
+      const modelId = getModelId(id);
+      const prompter = getPrompter(modelId);
+      updateSystemContext(id, prompter.systemContext(id));
+    },
     getCurrentSystemContext: () => {
       return getCurrentSystemContext(id);
     },
@@ -462,20 +601,22 @@ const useChat = (id: string, chatId?: string) => {
     postChat: (
       content: string,
       ignoreHistory: boolean = false,
-      model: Model | undefined = undefined,
       preProcessInput:
         | ((message: ShownMessage[]) => ShownMessage[])
         | undefined = undefined,
-      postProcessOutput: ((message: string) => string) | undefined = undefined
+      postProcessOutput: ((message: string) => string) | undefined = undefined,
+      sessionId: string | undefined = undefined,
+      extraData: UploadedFileType[] | undefined = undefined
     ) => {
       post(
         id,
         content,
         mutateConversations,
         ignoreHistory,
-        model,
         preProcessInput,
-        postProcessOutput
+        postProcessOutput,
+        sessionId,
+        extraData
       );
     },
     sendFeedback: async (createdDate: string, feedback: string) => {
