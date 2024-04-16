@@ -14,8 +14,9 @@ import {
   PiNotebook,
   PiPen,
   PiRobot,
+  PiVideoCamera,
 } from 'react-icons/pi';
-import { ReactComponent as AwsIcon } from '../assets/aws.svg';
+import AwsIcon from '../assets/aws.svg?react';
 import useInterUseCases from '../hooks/useInterUseCases';
 import {
   AgentPageQueryParams,
@@ -28,11 +29,15 @@ import {
   SummarizePageQueryParams,
   TranslatePageQueryParams,
   WebContentPageQueryParams,
+  VideoAnalyzerPageQueryParams,
 } from '../@types/navigate';
 import queryString from 'query-string';
+import { MODELS } from '../hooks/useModel';
 
 const ragEnabled: boolean = import.meta.env.VITE_APP_RAG_ENABLED === 'true';
 const agentEnabled: boolean = import.meta.env.VITE_APP_AGENT_ENABLED === 'true';
+const { multiModalModelIds } = MODELS;
+const multiModalEnabled: boolean = multiModalModelIds.length > 0;
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -111,6 +116,14 @@ const LandingPage: React.FC = () => {
 可愛い、おしゃれ、使いやすい、POPカルチャー、親しみやすい、若者向け、音楽、写真、流行のスマホ、背景が街`,
     };
     navigate(`/image?${queryString.stringify(params)}`);
+  };
+
+  const demoVideoAnalyzer = () => {
+    const params: VideoAnalyzerPageQueryParams = {
+      content:
+        '映っているものを説明してください。もし映っているものに文字が書かれている場合はそれも読んでください。',
+    };
+    navigate(`/video?${queryString.stringify(params)}`);
   };
 
   const demoBlog = () => {
@@ -203,6 +216,7 @@ const LandingPage: React.FC = () => {
 - フィラーワードを除去してください。
 - 文字起こしの誤認識と思われる内容は正しい内容に書き換えてください。
 - 接続詞などが省略されている場合は、読みやすいように補完してください。
+- 質疑応答も省略せず、記載してください。
 </rules>`,
           },
           information: {
@@ -266,7 +280,7 @@ const LandingPage: React.FC = () => {
             label="Agent チャット"
             onClickDemo={demoAgent}
             icon={<PiRobot />}
-            description="RAG (Retrieval Augmented Generation) は、情報の検索と LLM の文章生成を組み合わせる手法のことで、効果的な情報アクセスを実現できます。Amazon Kendra から取得した参考ドキュメントをベースに LLM が回答を生成してくれるため、「社内情報に対応した LLM チャット」を簡単に実現することが可能です。"
+            description="Agent チャットユースケースでは Agent for Amazon Bedrock を利用してアクションを実行させたり、Knowledge base for Amazon Bedrock のベクトルデータベースを参照することが可能です。"
           />
         )}
         <CardDemo
@@ -305,6 +319,14 @@ const LandingPage: React.FC = () => {
           icon={<PiImages />}
           description="画像生成 AI は、テキストや画像を元に新しい画像を生成できます。アイデアを即座に可視化することができ、デザイン作業などの効率化を期待できます。こちらの機能では、プロンプトの作成を LLM に支援してもらうことができます。"
         />
+        {multiModalEnabled && (
+          <CardDemo
+            label="映像分析"
+            onClickDemo={demoVideoAnalyzer}
+            icon={<PiVideoCamera />}
+            description="マルチモーダルモデルによってテキストのみではなく、画像を入力することが可能になりました。こちらの機能では、映像の画像フレームとテキストを入力として LLM に分析を依頼します。"
+          />
+        )}
       </div>
 
       <h1 className="mb-6 mt-12 flex justify-center text-2xl font-bold">

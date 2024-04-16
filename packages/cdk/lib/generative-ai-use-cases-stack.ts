@@ -14,6 +14,7 @@ import {
 import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2';
 import { Template } from './construct/template';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import { ICertificate } from 'aws-cdk-lib/aws-certificatemanager';
 
 const errorMessageForBooleanContext = (key: string) => {
   return `${key} の設定でエラーになりました。原因として考えられるものは以下です。
@@ -27,6 +28,11 @@ interface GenerativeAiUseCasesStackProps extends StackProps {
   allowedIpV4AddressRanges: string[] | null;
   allowedIpV6AddressRanges: string[] | null;
   allowedCountryCodes: string[] | null;
+  vpcId?: string;
+  cert?: ICertificate;
+  hostName?: string;
+  domainName?: string;
+  hostedZoneId?: string;
 }
 
 export class GenerativeAiUseCasesStack extends Stack {
@@ -132,6 +138,10 @@ export class GenerativeAiUseCasesStack extends Stack {
       samlCognitoFederatedIdentityProviderName,
       agentNames: api.agentNames,
       recognizeFileEnabled,
+      cert: props.cert,
+      hostName: props.hostName,
+      domainName: props.domainName,
+      hostedZoneId: props.hostedZoneId,
     });
 
     if (ragEnabled) {
@@ -164,6 +174,7 @@ export class GenerativeAiUseCasesStack extends Stack {
         userPool: auth.userPool,
         api: api.api,
         fileBucket: file.fielBucket,
+        vpcId: props.vpcId,
       });
     }
 
@@ -171,9 +182,15 @@ export class GenerativeAiUseCasesStack extends Stack {
       value: this.region,
     });
 
-    new CfnOutput(this, 'WebUrl', {
-      value: `https://${web.distribution.domainName}`,
-    });
+    if (props.hostName && props.domainName) {
+      new CfnOutput(this, 'WebUrl', {
+        value: `https://${props.hostName}.${props.domainName}`,
+      });
+    } else {
+      new CfnOutput(this, 'WebUrl', {
+        value: `https://${web.distribution.domainName}`,
+      });
+    }
 
     new CfnOutput(this, 'ApiEndpoint', {
       value: api.api.url,

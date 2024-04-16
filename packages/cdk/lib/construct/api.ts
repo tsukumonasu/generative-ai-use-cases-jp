@@ -32,6 +32,7 @@ export class Api extends Construct {
   readonly endpointNames: string[];
   readonly authorizer: CognitoUserPoolsAuthorizer;
   readonly agentNames: string[];
+  readonly crossAccountBedrockRoleArn: string;
 
   constructor(scope: Construct, id: string, props: BackendApiProps) {
     super(scope, id);
@@ -70,6 +71,7 @@ export class Api extends Construct {
       'meta.llama2-70b-chat-v1',
       'mistral.mistral-7b-instruct-v0:2',
       'mistral.mixtral-8x7b-instruct-v0:1',
+      'mistral.mistral-large-2402-v1:0',
     ];
     const multiModalModelIds = [
       'anthropic.claude-3-sonnet-20240229-v1:0',
@@ -93,6 +95,11 @@ export class Api extends Construct {
       };
     }
 
+    // cross account access IAM role
+    const crossAccountBedrockRoleArn = this.node.tryGetContext(
+      'crossAccountBedrockRoleArn'
+    );
+
     // Lambda
     const predictFunction = new NodejsFunction(this, 'Predict', {
       runtime: Runtime.NODEJS_18_X,
@@ -102,6 +109,7 @@ export class Api extends Construct {
         MODEL_REGION: modelRegion,
         MODEL_IDS: JSON.stringify(modelIds),
         IMAGE_GENERATION_MODEL_IDS: JSON.stringify(imageGenerationModelIds),
+        CROSS_ACCOUNT_BEDROCK_ROLE_ARN: crossAccountBedrockRoleArn,
       },
       bundling: {
         nodeModules: ['@aws-sdk/client-bedrock-runtime'],
@@ -118,6 +126,7 @@ export class Api extends Construct {
         IMAGE_GENERATION_MODEL_IDS: JSON.stringify(imageGenerationModelIds),
         AGENT_REGION: agentRegion,
         AGENT_MAP: JSON.stringify(agentMap),
+        CROSS_ACCOUNT_BEDROCK_ROLE_ARN: crossAccountBedrockRoleArn,
       },
       bundling: {
         nodeModules: [
@@ -144,6 +153,7 @@ export class Api extends Construct {
         MODEL_REGION: modelRegion,
         MODEL_IDS: JSON.stringify(modelIds),
         IMAGE_GENERATION_MODEL_IDS: JSON.stringify(imageGenerationModelIds),
+        CROSS_ACCOUNT_BEDROCK_ROLE_ARN: crossAccountBedrockRoleArn,
       },
     });
     table.grantWriteData(predictTitleFunction);
@@ -156,6 +166,7 @@ export class Api extends Construct {
         MODEL_REGION: modelRegion,
         MODEL_IDS: JSON.stringify(modelIds),
         IMAGE_GENERATION_MODEL_IDS: JSON.stringify(imageGenerationModelIds),
+        CROSS_ACCOUNT_BEDROCK_ROLE_ARN: crossAccountBedrockRoleArn,
       },
       bundling: {
         nodeModules: ['@aws-sdk/client-bedrock-runtime'],
@@ -183,15 +194,40 @@ export class Api extends Construct {
 
     // Bedrock は常に権限付与
     // Bedrock Policy
-    const bedrockPolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      resources: ['*'],
-      actions: ['bedrock:*', 'logs:*'],
-    });
-    predictStreamFunction.role?.addToPrincipalPolicy(bedrockPolicy);
-    predictFunction.role?.addToPrincipalPolicy(bedrockPolicy);
-    predictTitleFunction.role?.addToPrincipalPolicy(bedrockPolicy);
-    generateImageFunction.role?.addToPrincipalPolicy(bedrockPolicy);
+    if (
+      typeof crossAccountBedrockRoleArn !== 'string' ||
+      crossAccountBedrockRoleArn === ''
+    ) {
+      const bedrockPolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        resources: ['*'],
+        actions: ['bedrock:*', 'logs:*'],
+      });
+      predictStreamFunction.role?.addToPrincipalPolicy(bedrockPolicy);
+      predictFunction.role?.addToPrincipalPolicy(bedrockPolicy);
+      predictTitleFunction.role?.addToPrincipalPolicy(bedrockPolicy);
+      generateImageFunction.role?.addToPrincipalPolicy(bedrockPolicy);
+    } else {
+      // crossAccountBedrockRoleArn が指定されている場合のポリシー
+      const logsPolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['logs:*'],
+        resources: ['*'],
+      });
+      const assumeRolePolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['sts:AssumeRole'],
+        resources: [crossAccountBedrockRoleArn],
+      });
+      predictStreamFunction.role?.addToPrincipalPolicy(logsPolicy);
+      predictFunction.role?.addToPrincipalPolicy(logsPolicy);
+      predictTitleFunction.role?.addToPrincipalPolicy(logsPolicy);
+      generateImageFunction.role?.addToPrincipalPolicy(logsPolicy);
+      predictStreamFunction.role?.addToPrincipalPolicy(assumeRolePolicy);
+      predictFunction.role?.addToPrincipalPolicy(assumeRolePolicy);
+      predictTitleFunction.role?.addToPrincipalPolicy(assumeRolePolicy);
+      generateImageFunction.role?.addToPrincipalPolicy(assumeRolePolicy);
+    }
 
     const createChatFunction = new NodejsFunction(this, 'CreateChat', {
       runtime: Runtime.NODEJS_18_X,
@@ -323,6 +359,48 @@ export class Api extends Construct {
     });
     table.grantReadWriteData(deleteShareId);
 
+    const listSystemContextsFunction = new NodejsFunction(
+      this,
+      'ListSystemContexts',
+      {
+        runtime: Runtime.NODEJS_18_X,
+        entry: './lambda/listSystemContexts.ts',
+        timeout: Duration.minutes(15),
+        environment: {
+          TABLE_NAME: table.tableName,
+        },
+      }
+    );
+    table.grantReadData(listSystemContextsFunction);
+
+    const createSystemContextFunction = new NodejsFunction(
+      this,
+      'CreateSystemContexts',
+      {
+        runtime: Runtime.NODEJS_18_X,
+        entry: './lambda/createSystemContext.ts',
+        timeout: Duration.minutes(15),
+        environment: {
+          TABLE_NAME: table.tableName,
+        },
+      }
+    );
+    table.grantWriteData(createSystemContextFunction);
+
+    const deleteSystemContextFunction = new NodejsFunction(
+      this,
+      'DeleteSystemContexts',
+      {
+        runtime: Runtime.NODEJS_18_X,
+        entry: './lambda/deleteSystemContext.ts',
+        timeout: Duration.minutes(15),
+        environment: {
+          TABLE_NAME: table.tableName,
+        },
+      }
+    );
+    table.grantReadWriteData(deleteSystemContextFunction);
+
     // API Gateway
     const authorizer = new CognitoUserPoolsAuthorizer(this, 'Authorizer', {
       cognitoUserPools: [userPool],
@@ -429,6 +507,32 @@ export class Api extends Construct {
     messagesResource.addMethod(
       'POST',
       new LambdaIntegration(createMessagesFunction),
+      commonAuthorizerProps
+    );
+
+    const systemContextsResource = api.root.addResource('systemcontexts');
+
+    // POST: /systemcontexts
+    systemContextsResource.addMethod(
+      'POST',
+      new LambdaIntegration(createSystemContextFunction),
+      commonAuthorizerProps
+    );
+
+    // GET: /systemcontexts
+    systemContextsResource.addMethod(
+      'GET',
+      new LambdaIntegration(listSystemContextsFunction),
+      commonAuthorizerProps
+    );
+
+    const systemContextResource =
+      systemContextsResource.addResource('{systemContextId}');
+
+    // DELETE: /systemcontexts/{systemContextId}
+    systemContextResource.addMethod(
+      'DELETE',
+      new LambdaIntegration(deleteSystemContextFunction),
       commonAuthorizerProps
     );
 

@@ -87,6 +87,15 @@ Generative AI（生成 AI）は、ビジネスの変革に革新的な可能性�
 </details>
 
 
+<details>
+  <summary>映像分析</summary>
+
+  マルチモーダルモデルによってテキストのみではなく、画像を入力することが可能になりました。こちらの機能では、映像の画像フレームとテキストを入力として LLM に分析を依頼します。
+
+  <img src="/imgs/usecase_video_analyzer.gif"/>
+</details>
+
+
 ## アーキテクチャ
 
 このサンプルでは、フロントエンドは React を用いて実装し、静的ファイルは Amazon CloudFront + Amazon S3 によって配信されています。バックエンドには Amazon API Gateway + AWS Lambda、認証には Amazon Congito を使用しています。また、LLM は Amazon Bedrock を使用します。RAG のデータソースには Amazon Kendra を利用しています。
@@ -129,6 +138,7 @@ npm run cdk:deploy
   - [Agent チャットユースケースの有効化](/docs/DEPLOY_OPTION.md#agent-チャットユースケースの有効化)
     - [検索エージェントのデプロイ](/docs/DEPLOY_OPTION.md#検索エージェントのデプロイ)
     - [Knowledge base エージェントのデプロイ](/docs/DEPLOY_OPTION.md#knowledge-base-エージェントのデプロイ)
+  - [映像分析ユースケースの有効化](/docs/DEPLOY_OPTION.md#映像分析ユースケースの有効化)
 - [Amazon Bedrock のモデルを変更する](/docs/DEPLOY_OPTION.md#amazon-bedrock-のモデルを変更する)
   - [us-east-1 (バージニア) の Amazon Bedrock のモデルを利用する例](/docs/DEPLOY_OPTION.md#us-east-1-バージニア-の-amazon-bedrock-のモデルを利用する例)
   - [ap-northeast-1 (東京) の Amazon Bedrock のモデルを利用する例](/docs/DEPLOY_OPTION.md#ap-northeast-1-東京-の-amazon-bedrock-のモデルを利用する例)
@@ -144,11 +154,14 @@ npm run cdk:deploy
   - [SAML 認証](/docs/DEPLOY_OPTION.md#SAML-認証)
 - [モニタリング用のダッシュボードの有効化](/docs/DEPLOY_OPTION.md#モニタリング用のダッシュボードの有効化)
 - [ファイルアップロード機能の有効化](/docs/DEPLOY_OPTION.md#ファイルアップロード機能の有効化)
+- [別 AWS アカウントの Bedrock を利用したい場合](/docs/DEPLOY_OPTION.md#別-AWS-アカウントの-Bedrock-を利用したい場合)
 
 ## その他
  - [アップデート方法](/docs/UPDATE.md)
  - [ローカル開発環境構築手順](/docs/DEVELOPMENT.md)
  - [リソースの削除方法](/docs/DESTROY.md)
+ - [AWS 上で完結するデプロイ方法 (手元に環境を用意することが難しい場合)](/docs/DEPLOY_ON_AWS.md)
+ - [ネイティブアプリのように利用する方法](/docs/PWA.md)
 
 ## 参照
  - [ブログ: Generative AI Use Cases JP をカスタマイズする方法](https://aws.amazon.com/jp/blogs/news/how-to-generative-ai-use-cases-jp/)
